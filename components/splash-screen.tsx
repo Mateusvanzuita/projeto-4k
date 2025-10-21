@@ -22,7 +22,7 @@ export default function SplashScreen() {
     >
       <div className="animate-fade-in">
         <div className="relative w-48 h-48 animate-pulse">
-          <Image src="https://i.imgur.com/Rm4fQnT.jpeg" alt="4K Team Logo" fill className="object-contain" priority />
+          <Image src="https://i.imgur.com/NeE31BD.png" alt="4K Team Logo" fill className="object-contain" priority />
         </div>
       </div>
     </div>
