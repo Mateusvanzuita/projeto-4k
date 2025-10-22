@@ -151,6 +151,7 @@ export function AppLayout({
           </Button>
 
           {/* Relatórios Button */}
+          <Link href={"/coach/relatorios"}>
           <Button
             variant="ghost"
             className="flex flex-col items-center gap-1 h-auto py-2 px-4"
@@ -159,6 +160,7 @@ export function AppLayout({
             <FileText className="h-5 w-5 text-primary" />
             <span className="text-xs text-primary font-medium">Relatórios</span>
           </Button>
+          </Link>
         </div>
       </div>
     </div>
