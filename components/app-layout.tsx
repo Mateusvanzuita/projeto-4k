@@ -143,13 +143,14 @@ export function AppLayout({
           </Button>
           </Link>
           {/* Create Protocol Button (Central) */}
+          <Link href={"/coach/protocolos"}>
           <Button
             className="relative -mt-8 h-14 w-14 rounded-full bg-secondary hover:bg-secondary/90 shadow-lg"
             onClick={onCreateProtocol}
           >
             <Plus className="h-6 w-6 text-primary" />
           </Button>
-
+          </Link>
           {/* Relatórios Button */}
           <Link href={"/coach/relatorios"}>
           <Button
