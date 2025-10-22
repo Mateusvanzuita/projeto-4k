@@ -45,8 +45,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-screen w-full flex-col justify-center items-center p-4 overflow-y-auto bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-4">
-      <div className="max-w-md mx-auto flex flex-col justify-center min-h-screen">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-4">
+      <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
           {/* Logo */}
           <div className="flex justify-center mb-8">
@@ -73,7 +73,10 @@ export default function LoginPage() {
               <Label htmlFor="email">E-mail ou usuário</Label>
               <Input
                 id="email"
-                type="text"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
                 placeholder="seu@email.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -88,6 +91,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
