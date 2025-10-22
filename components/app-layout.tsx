@@ -8,6 +8,7 @@ import { Bell, Menu, Plus, Users, FileText, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/contexts/auth-context"
+import Link from "next/link"
 
 interface MenuItem {
   label: string
@@ -131,6 +132,7 @@ export function AppLayout({
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border shadow-lg z-40">
         <div className="flex items-center justify-around px-4 py-2">
           {/* Alunos Button */}
+          <Link href={"/coach/alunos"}>
           <Button
             variant="ghost"
             className="flex flex-col items-center gap-1 h-auto py-2 px-4"
@@ -139,7 +141,7 @@ export function AppLayout({
             <Users className="h-5 w-5 text-primary" />
             <span className="text-xs text-primary font-medium">Alunos</span>
           </Button>
-
+          </Link>
           {/* Create Protocol Button (Central) */}
           <Button
             className="relative -mt-8 h-14 w-14 rounded-full bg-secondary hover:bg-secondary/90 shadow-lg"
