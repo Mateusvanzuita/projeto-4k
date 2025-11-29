@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Aluno, AlunoFormData, Sexo, Plano, TipoPlano, Objetivo, FrequenciaFotos } from "@/types/aluno"
-import { SEXO_LABELS, PLANO_LABELS, TIPO_PLANO_LABELS, OBJETIVO_LABELS, FREQUENCIA_FOTOS_LABELS } from "@/types/aluno"
+import type { Aluno, AlunoFormData, Sexo, Plano, TipoPlano, FrequenciaFotos, Objetivo } from "@/types/aluno"
+import { SEXO_LABELS, PLANO_LABELS, TIPO_PLANO_LABELS, FREQUENCIA_FOTOS_LABELS, OBJETIVO_OPTIONS, OBJETIVO_VALUES, OBJETIVO_LABELS } from "@/types/aluno"
 
 interface AlunoFormDialogProps {
   open: boolean
@@ -24,23 +24,48 @@ interface AlunoFormDialogProps {
 export function AlunoFormDialog({ open, onOpenChange, onSubmit, aluno, isLoading }: AlunoFormDialogProps) {
   const [formData, setFormData] = useState<AlunoFormData>({
     nomeCompleto: aluno?.nomeCompleto || "",
-    idade: aluno?.idade || 18,
-    sexo: aluno?.sexo || "masculino",
-    altura: aluno?.altura || 170,
-    peso: aluno?.peso || 70,
+    dataNascimento: aluno?.dataNascimento || "",
+    sexo: aluno?.sexo || "MASCULINO",
+    altura: aluno?.altura || 0,
+    peso: aluno?.peso || 0,
     email: aluno?.email || "",
     senha: "",
     contato: aluno?.contato || "",
-    plano: aluno?.plano || "mensal",
-    tipoPlano: aluno?.tipoPlano || "full",
-    objetivo: aluno?.objetivo || "hipertrofia",
+    plano: aluno?.plano || "MENSAL",
+    tipoPlano: aluno?.tipoPlano || "FULL",
+    objetivo: (aluno?.objetivo as Objetivo) || "HIPERTROFIA",
+
     jaTreinava: aluno?.jaTreinava || false,
     restricaoAlimentar: aluno?.restricaoAlimentar || "",
     restricaoExercicio: aluno?.restricaoExercicio || "",
     historicoMedico: aluno?.historicoMedico || "",
-    frequenciaFotos: aluno?.frequenciaFotos || "quinzenal",
+    frequenciaFotos: aluno?.frequenciaFotos || "QUINZENAL",
     observacoes: aluno?.observacoes || "",
   })
+
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        nomeCompleto: aluno?.nomeCompleto || "",
+        dataNascimento: aluno?.dataNascimento || "",
+        sexo: aluno?.sexo || "MASCULINO",
+        altura: aluno?.altura || 0,
+        peso: aluno?.peso || 0,
+        email: aluno?.email || "",
+        senha: "",
+        contato: aluno?.contato || "",
+        plano: aluno?.plano || "MENSAL",
+        tipoPlano: aluno?.tipoPlano || "FULL",
+        objetivo: (aluno?.objetivo as Objetivo) || "HIPERTROFIA",
+        jaTreinava: aluno?.jaTreinava || false,
+        restricaoAlimentar: aluno?.restricaoAlimentar || "",
+        restricaoExercicio: aluno?.restricaoExercicio || "",
+        historicoMedico: aluno?.historicoMedico || "",
+        frequenciaFotos: aluno?.frequenciaFotos || "QUINZENAL",
+        observacoes: aluno?.observacoes || "",
+      })
+    }
+  }, [open, aluno])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,20 +102,14 @@ export function AlunoFormDialog({ open, onOpenChange, onSubmit, aluno, isLoading
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="idade">Idade *</Label>
+                  <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
                   <Input
-                    id="idade"
-                    type="number"
-                    min="10"
-                    max="120"
-                    value={formData.idade}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        idade: Number.parseInt(e.target.value),
-                      })
-                    }
+                    id="dataNascimento"
+                    type="date"
+                    value={formData.dataNascimento}
+                    onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
                     required
+                    max={new Date().toISOString().split("T")[0]}
                   />
                 </div>
 
@@ -116,19 +135,21 @@ export function AlunoFormDialog({ open, onOpenChange, onSubmit, aluno, isLoading
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="altura">Altura (cm) *</Label>
+                  <Label htmlFor="altura">Altura (m) *</Label>
                   <Input
                     id="altura"
                     type="number"
-                    min="100"
-                    max="250"
+                    min="0.50"
+                    max="2.50"
+                    step="0.01"
                     value={formData.altura}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        altura: Number.parseInt(e.target.value),
+                        altura: Number.parseFloat(e.target.value),
                       })
                     }
+                    placeholder="Ex: 1.80"
                     required
                   />
                 </div>
@@ -167,14 +188,13 @@ export function AlunoFormDialog({ open, onOpenChange, onSubmit, aluno, isLoading
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contato">Contato *</Label>
+                <Label htmlFor="contato">Contato</Label>
                 <Input
                   id="contato"
                   type="tel"
                   value={formData.contato}
                   onChange={(e) => setFormData({ ...formData, contato: e.target.value })}
                   placeholder="(11) 98765-4321"
-                  required
                   autoComplete="tel"
                   inputMode="tel"
                 />
@@ -226,23 +246,24 @@ export function AlunoFormDialog({ open, onOpenChange, onSubmit, aluno, isLoading
                 <Label htmlFor="objetivo">Objetivo *</Label>
                 <Select
                   value={formData.objetivo}
-                  onValueChange={(value: Objetivo) => setFormData({ ...formData, objetivo: value })}
+                  onValueChange={(value) => setFormData({ ...formData, objetivo: value })}
                 >
                   <SelectTrigger id="objetivo">
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione o objetivo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(OBJETIVO_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
+                                  {OBJETIVO_VALUES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {OBJETIVO_LABELS[value]}
+                </SelectItem>
+              ))}
+
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="jaTreinava">Já treinava antes? *</Label>
+                <Label htmlFor="jaTreinava">Já treinava antes?</Label>
                 <Select
                   value={formData.jaTreinava ? "sim" : "nao"}
                   onValueChange={(value) => setFormData({ ...formData, jaTreinava: value === "sim" })}

@@ -4,13 +4,14 @@ export interface User {
   id: string
   email: string
   name: string
-  role: UserRole
+  role: string // "USER" or "ADMIN" from backend
+  userType: "COACH" | "STUDENT" // Backend uses userType, not role
   avatar?: string
+  createdAt?: string
 }
 
 export interface LoginResponse {
-  accessToken: string
-  refreshToken: string
+  token: string // Backend returns single "token" field, not accessToken/refreshToken
   user: User
 }
 
@@ -18,4 +19,11 @@ export interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
+}
+
+export interface RegisterData {
+  email: string
+  password: string
+  name: string
+  userType: "COACH" | "STUDENT"
 }

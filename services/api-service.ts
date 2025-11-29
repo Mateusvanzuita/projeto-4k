@@ -1,7 +1,7 @@
 import { authService } from "./auth-service"
 
 class ApiService {
-  private baseUrl = process.env.NEXT_PUBLIC_API_URL || "/api"
+  private baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
 
   /**
    * Generic fetch wrapper with authentication
@@ -20,36 +20,27 @@ class ApiService {
         headers,
       })
 
-      // Handle token expiration
+      // Handle token expiration or unauthorized
       if (response.status === 401) {
-        try {
-          await authService.refreshAccessToken()
-          // Retry request with new token
-          const retryResponse = await fetch(url, {
-            ...options,
-            headers: {
-              ...headers,
-              ...authService.getAuthHeader(),
-            },
-          })
-          if (!retryResponse.ok) {
-            throw new Error("Request failed after token refresh")
-          }
-          return retryResponse.json()
-        } catch {
-          // Refresh failed, clear auth and redirect to login
-          authService.clearStorage()
+        authService.clearStorage()
+        if (typeof window !== "undefined") {
           window.location.href = "/auth/login"
-          throw new Error("Session expired")
         }
+        throw new Error("Sessão expirada. Faça login novamente.")
       }
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(error.message || "Request failed")
+        const error = await response.json().catch(() => ({ message: "Erro na requisição" }))
+        throw new Error(error.message || `Request failed with status ${response.status}`)
       }
 
-      return response.json()
+      // Handle empty responses
+      const contentType = response.headers.get("content-type")
+      if (contentType && contentType.includes("application/json")) {
+        return response.json()
+      }
+
+      return {} as T
     } catch (error) {
       console.error("API Error:", error)
       throw error

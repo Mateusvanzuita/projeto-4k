@@ -31,10 +31,10 @@ export default function LoginPage() {
     try {
       const user = await login(formData.email, formData.password, rememberMe)
 
-      // Redirect based on user role
-      if (user.role === "coach") {
+      // Redirect based on user type
+      if (user.userType === "COACH") {
         router.push("/coach/dashboard")
-      } else if (user.role === "aluno") {
+      } else if (user.userType === "STUDENT") {
         router.push("/aluno/dashboard")
       }
     } catch (err) {

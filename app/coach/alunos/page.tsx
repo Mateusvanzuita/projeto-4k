@@ -5,24 +5,21 @@ import { useRouter } from "next/navigation"
 import { AppLayout } from "@/components/app-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search } from "lucide-react"
 import { AlunoCard } from "@/components/aluno-card"
 import { AlunoFormDialog } from "@/components/aluno-form-dialog"
 import { alunoService } from "@/services/aluno-service"
 import { coachMenuItems } from "@/lib/menu-items"
-import { useToast } from "@/hooks/use-toast"
-import type { Aluno, AlunoFormData, Objetivo } from "@/types/aluno"
+import { toast } from "sonner"
+import type { Aluno, AlunoFormData } from "@/types/aluno"
 
 export default function AlunosPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [alunos, setAlunos] = useState<Aluno[]>([])
   const [filteredAlunos, setFilteredAlunos] = useState<Aluno[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [objetivoFilter, setObjetivoFilter] = useState<Objetivo | "todos">("todos")
   const [planoFilter, setPlanoFilter] = useState<string>("todos")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingAluno, setEditingAluno] = useState<Aluno | undefined>()
@@ -34,7 +31,7 @@ export default function AlunosPage() {
 
   useEffect(() => {
     filterAlunos()
-  }, [alunos, searchTerm, objetivoFilter, planoFilter])
+  }, [alunos, searchTerm, planoFilter])
 
   const loadAlunos = async () => {
     try {
@@ -42,11 +39,7 @@ export default function AlunosPage() {
       const data = await alunoService.getAll()
       setAlunos(data)
     } catch (error) {
-      toast({
-        title: "Erro ao carregar alunos",
-        description: "Tente novamente mais tarde",
-        variant: "destructive",
-      })
+      toast.error("Erro ao carregar alunos")
     } finally {
       setIsLoading(false)
     }
@@ -59,16 +52,13 @@ export default function AlunosPage() {
       filtered = filtered.filter(
         (aluno) =>
           aluno.nomeCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          aluno.email.toLowerCase().includes(searchTerm.toLowerCase()),
+          aluno.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (aluno.objetivo && aluno.objetivo.toLowerCase().includes(searchTerm.toLowerCase())),
       )
     }
 
-    if (objetivoFilter !== "todos") {
-      filtered = filtered.filter((aluno) => aluno.objetivo === objetivoFilter)
-    }
-
     if (planoFilter !== "todos") {
-      filtered = filtered.filter((aluno) => aluno.tipoPlano === planoFilter)
+      filtered = filtered.filter((aluno) => aluno.tipoPlano === planoFilter.toUpperCase())
     }
 
     setFilteredAlunos(filtered)
@@ -85,21 +75,12 @@ export default function AlunosPage() {
   }
 
   const handleDeleteAluno = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este aluno?")) return
-
     try {
       await alunoService.delete(id)
       setAlunos(alunos.filter((a) => a.id !== id))
-      toast({
-        title: "Aluno excluído",
-        description: "O aluno foi removido com sucesso",
-      })
+      toast.success("Aluno excluído com sucesso")
     } catch (error) {
-      toast({
-        title: "Erro ao excluir aluno",
-        description: "Tente novamente mais tarde",
-        variant: "destructive",
-      })
+      toast.error("Erro ao excluir aluno")
     }
   }
 
@@ -110,26 +91,16 @@ export default function AlunosPage() {
       if (editingAluno) {
         const updated = await alunoService.update(editingAluno.id, data)
         setAlunos(alunos.map((a) => (a.id === updated.id ? updated : a)))
-        toast({
-          title: "Aluno atualizado",
-          description: "As informações foram salvas com sucesso",
-        })
+        toast.success("Aluno atualizado")
       } else {
         const newAluno = await alunoService.create(data)
         setAlunos([newAluno, ...alunos])
-        toast({
-          title: "Aluno adicionado",
-          description: "O novo aluno foi cadastrado com sucesso",
-        })
+        toast.success("Aluno adicionado")
       }
 
       setIsDialogOpen(false)
     } catch (error) {
-      toast({
-        title: "Erro ao salvar aluno",
-        description: "Tente novamente mais tarde",
-        variant: "destructive",
-      })
+      toast.error("Erro ao salvar aluno")
     } finally {
       setIsSaving(false)
     }
@@ -162,7 +133,7 @@ export default function AlunosPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome ou email..."
+              placeholder="Buscar por nome, email ou objetivo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -181,23 +152,11 @@ export default function AlunosPage() {
           </Select>
         </div>
 
-        <Tabs value={objetivoFilter} onValueChange={(value) => setObjetivoFilter(value as Objetivo | "todos")}>
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="todos">Todos</TabsTrigger>
-            <TabsTrigger value="perda_peso">Perda de Peso</TabsTrigger>
-            <TabsTrigger value="hipertrofia">Hipertrofia</TabsTrigger>
-            <TabsTrigger value="definicao">Definição</TabsTrigger>
-            <TabsTrigger value="saude">Saúde</TabsTrigger>
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-            <TabsTrigger value="reabilitacao">Reabilitação</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando alunos...</div>
         ) : filteredAlunos.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            {searchTerm || objetivoFilter !== "todos" || planoFilter !== "todos"
+            {searchTerm || planoFilter !== "todos"
               ? "Nenhum aluno encontrado com os filtros aplicados"
               : "Nenhum aluno cadastrado ainda"}
           </div>

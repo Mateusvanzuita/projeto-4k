@@ -1,130 +1,90 @@
 import type { LoginResponse, User } from "@/types/auth"
 
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: "4k_access_token",
-  REFRESH_TOKEN: "4k_refresh_token",
+  TOKEN: "4k_token",
   USER: "4k_user",
 }
 
 class AuthService {
-  private apiUrl = process.env.NEXT_PUBLIC_API_URL || "/api"
+  private apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
 
   /**
    * Login user with email and password
-   * TODO: Replace mock implementation with actual API call
    */
   async login(email: string, password: string): Promise<LoginResponse> {
-    // MOCK IMPLEMENTATION - Replace with actual API call
-    // Example:
-    // const response = await fetch(`${this.apiUrl}/auth/login`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email, password }),
-    // })
-    // if (!response.ok) throw new Error('Login failed')
-    // return response.json()
+    try {
+      const response = await fetch(`${this.apiUrl}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Erro ao fazer login" }))
+        throw new Error(error.message || "E-mail ou senha inválidos")
+      }
 
-    // Mock validation
-    if (email === "coach@4kteam.com" && password === "coach123") {
-      return {
-        accessToken: "mock_access_token_coach",
-        refreshToken: "mock_refresh_token_coach",
-        user: {
-          id: "1",
-          email: "coach@4kteam.com",
-          name: "Coach Demo",
-          role: "coach",
-        },
-      }
-    } else if (email === "aluno@4kteam.com" && password === "aluno123") {
-      return {
-        accessToken: "mock_access_token_aluno",
-        refreshToken: "mock_refresh_token_aluno",
-        user: {
-          id: "2",
-          email: "aluno@4kteam.com",
-          name: "Aluno Demo",
-          role: "aluno",
-        },
-      }
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error("Login error:", error)
+      throw error
     }
+  }
 
-    throw new Error("E-mail ou senha inválidos")
+  /**
+   * Get current user profile
+   */
+  async getProfile(): Promise<User> {
+    try {
+      const response = await fetch(`${this.apiUrl}/auth/profile`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...this.getAuthHeader(),
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Falha ao obter perfil")
+      }
+
+      return response.json()
+    } catch (error) {
+      console.error("Get profile error:", error)
+      throw error
+    }
   }
 
   /**
    * Logout user
-   * TODO: Implement API call to invalidate tokens
    */
   async logout(): Promise<void> {
-    // TODO: Call backend to invalidate tokens
-    // await fetch(`${this.apiUrl}/auth/logout`, {
-    //   method: 'POST',
-    //   headers: { Authorization: `Bearer ${this.getAccessToken()}` },
-    // })
+    // Backend doesn't have logout endpoint yet, just clear local storage
+    this.clearStorage()
   }
 
   /**
-   * Refresh access token using refresh token
-   * TODO: Implement actual token refresh logic
+   * Store authentication token
    */
-  async refreshAccessToken(): Promise<string> {
-    const refreshToken = this.getRefreshToken()
-    if (!refreshToken) {
-      throw new Error("No refresh token available")
-    }
-
-    // TODO: Replace with actual API call
-    // const response = await fetch(`${this.apiUrl}/auth/refresh`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ refreshToken }),
-    // })
-    // if (!response.ok) throw new Error('Token refresh failed')
-    // const { accessToken } = await response.json()
-    // this.storeAccessToken(accessToken)
-    // return accessToken
-
-    // Mock implementation
-    return "mock_new_access_token"
-  }
-
-  /**
-   * Store authentication tokens
-   */
-  storeTokens(accessToken: string, refreshToken: string, persistent = false): void {
+  storeToken(token: string, persistent = false): void {
     const storage = persistent ? localStorage : sessionStorage
-    storage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken)
-    storage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
+    storage.setItem(STORAGE_KEYS.TOKEN, token)
   }
 
   /**
    * Store user data
    */
-  storeUser(user: User): void {
-    const storage = this.getRefreshToken()
-      ? localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
-        ? localStorage
-        : sessionStorage
-      : sessionStorage
+  storeUser(user: User, persistent = false): void {
+    const storage = persistent ? localStorage : sessionStorage
     storage.setItem(STORAGE_KEYS.USER, JSON.stringify(user))
   }
 
   /**
-   * Get stored access token
+   * Get stored token
    */
-  getAccessToken(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN) || sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)
-  }
-
-  /**
-   * Get stored refresh token
-   */
-  getRefreshToken(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
+  getToken(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.TOKEN) || sessionStorage.getItem(STORAGE_KEYS.TOKEN)
   }
 
   /**
@@ -154,8 +114,15 @@ class AuthService {
    * Get authorization header for API requests
    */
   getAuthHeader(): Record<string, string> {
-    const token = this.getAccessToken()
+    const token = this.getToken()
     return token ? { Authorization: `Bearer ${token}` } : {}
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated(): boolean {
+    return !!this.getToken()
   }
 }
 

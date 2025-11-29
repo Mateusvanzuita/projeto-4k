@@ -1,141 +1,152 @@
+import { apiService } from "./api-service"
 import type { Aluno, AlunoFormData } from "@/types/aluno"
 
-// Mock data para desenvolvimento
-const mockAlunos: Aluno[] = [
-  {
-    id: "1",
-    nomeCompleto: "João Silva",
-    idade: 28,
-    sexo: "masculino",
-    altura: 178,
-    peso: 82,
-    email: "joao.silva@email.com",
-    contato: "(11) 98765-4321",
-    plano: "trimestral",
-    tipoPlano: "full",
-    objetivo: "hipertrofia",
-    jaTreinava: true,
-    restricaoAlimentar: "Intolerância à lactose",
-    restricaoExercicio: undefined,
-    historicoMedico: "Nenhum problema relevante",
-    frequenciaFotos: "quinzenal",
-    observacoes: "Aluno dedicado e pontual",
-    ativo: true,
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-15"),
-  },
-  {
-    id: "2",
-    nomeCompleto: "Maria Santos",
-    idade: 32,
-    sexo: "feminino",
-    altura: 165,
-    peso: 68,
-    email: "maria.santos@email.com",
-    contato: "(11) 91234-5678",
-    plano: "mensal",
-    tipoPlano: "dieta",
-    objetivo: "perda_peso",
-    jaTreinava: false,
-    restricaoAlimentar: "Vegetariana",
-    restricaoExercicio: "Problema no joelho direito",
-    historicoMedico: "Cirurgia no joelho em 2022",
-    frequenciaFotos: "semanal",
-    observacoes: "Iniciante, precisa de acompanhamento próximo",
-    ativo: true,
-    createdAt: new Date("2024-02-01"),
-    updatedAt: new Date("2024-02-01"),
-  },
-  {
-    id: "3",
-    nomeCompleto: "Carlos Oliveira",
-    idade: 45,
-    sexo: "masculino",
-    altura: 172,
-    peso: 95,
-    email: "carlos.oliveira@email.com",
-    contato: "(11) 99876-5432",
-    plano: "semestral",
-    tipoPlano: "full",
-    objetivo: "saude",
-    jaTreinava: true,
-    restricaoAlimentar: undefined,
-    restricaoExercicio: "Hipertensão controlada",
-    historicoMedico: "Hipertensão, diabetes tipo 2",
-    frequenciaFotos: "mensal",
-    observacoes: "Foco em saúde e qualidade de vida",
-    ativo: true,
-    createdAt: new Date("2024-01-20"),
-    updatedAt: new Date("2024-01-20"),
-  },
-]
+interface AlunoListResponse {
+  success: boolean
+  data: Aluno[]
+  pagination?: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
 
-let alunos = [...mockAlunos]
+function transformAlunoFromBackend(backendAluno: any): Aluno {
+  return {
+    id: backendAluno.id,
+    nomeCompleto: backendAluno.nomeCompleto || backendAluno.nomeAluno || backendAluno.name || "",
+    nomeAluno: backendAluno.nomeCompleto,
+    idade: backendAluno.idade,
+    dataNascimento: backendAluno.dataNascimento
+      ? new Date(backendAluno.dataNascimento).toISOString().split("T")[0]
+      : undefined,
+    sexo: backendAluno.sexo || "MASCULINO",
+    altura: backendAluno.altura || 1.7,
+    peso: backendAluno.peso || 70,
+    email: backendAluno.email,
+    contato: backendAluno.contato || "",
+    plano: backendAluno.plano || "MENSAL",
+    tipoPlano: backendAluno.tipoPlano || "FULL",
+    objetivo: backendAluno.objetivo || "Hipertrofia",
+    jaTreinava: backendAluno.jaTreinava || false,
+    restricaoAlimentar: backendAluno.restricaoAlimentar || "",
+    restricaoExercicio: backendAluno.restricaoExercicio || "",
+    historicoMedico: backendAluno.historicoMedico || "",
+    frequenciaFotos: backendAluno.frequenciaFotos || "QUINZENAL",
+    observacoes: backendAluno.observacoes || "",
+    ativo: backendAluno.ativo !== false,
+    coachId: backendAluno.coachId,
+    createdAt: backendAluno.createdAt || new Date(),
+    updatedAt: backendAluno.updatedAt || new Date(),
+  }
+}
 
 export const alunoService = {
-  getAll: async (): Promise<Aluno[]> => {
-    // Simula delay de API
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return alunos
+  getAll: async (params?: {
+    page?: number
+    limit?: number
+    search?: string
+    tipoPlano?: string
+    sexo?: string
+    duracaoPlano?: string
+  }): Promise<Aluno[]> => {
+    try {
+      const queryParams = new URLSearchParams()
+      if (params?.page) queryParams.append("page", params.page.toString())
+      if (params?.limit) queryParams.append("limit", params.limit.toString())
+      if (params?.search) queryParams.append("search", params.search)
+      if (params?.tipoPlano) queryParams.append("tipoPlano", params.tipoPlano.toUpperCase())
+      if (params?.sexo) queryParams.append("sexo", params.sexo.toUpperCase())
+      if (params?.duracaoPlano) queryParams.append("duracaoPlano", params.duracaoPlano.toUpperCase())
+
+      const endpoint = `/students${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+      const response = await apiService.get<AlunoListResponse>(endpoint)
+
+      return (response.data || []).map(transformAlunoFromBackend)
+    } catch (error) {
+      console.error("Error fetching alunos:", error)
+      throw error
+    }
   },
 
   getById: async (id: string): Promise<Aluno | null> => {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return alunos.find((a) => a.id === id) || null
+    try {
+      const response = await apiService.get<{ success: boolean; data: any }>(`/students/${id}`)
+      return response.data ? transformAlunoFromBackend(response.data) : null
+    } catch (error) {
+      console.error("Error fetching aluno:", error)
+      return null
+    }
   },
 
   create: async (data: AlunoFormData): Promise<Aluno> => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    try {
+      const backendData: any = {
+        nomeAluno: data.nomeCompleto,
+        email: data.email,
+        senha: data.senha,
+        dataNascimento: data.dataNascimento,
+        sexo: data.sexo,
+        altura: data.altura,
+        peso: data.peso,
+        plano: data.plano,
+        tipoPlano: data.tipoPlano,
+        objetivo: data.objetivo,
+        jaTreinava: data.jaTreinava,
+        restricaoAlimentar: data.restricaoAlimentar || null,
+        restricaoExercicio: data.restricaoExercicio || null,
+        historicoMedico: data.historicoMedico || null,
+        frequenciaFotos: data.frequenciaFotos,
+        observacoes: data.observacoes || null,
+        contato: data.contato,
+      }
 
-    const newAluno: Aluno = {
-      id: Date.now().toString(),
-      ...data,
-      ativo: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      const response = await apiService.post<{ success: boolean; data: any }>("/students", backendData)
+      return transformAlunoFromBackend(response.data)
+    } catch (error) {
+      console.error("Error creating aluno:", error)
+      throw error
     }
-
-    alunos.push(newAluno)
-    return newAluno
   },
 
-  update: async (id: string, data: AlunoFormData): Promise<Aluno> => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
+  update: async (id: string, data: Partial<AlunoFormData>): Promise<Aluno> => {
+    try {
+      const backendData: any = {}
 
-    const index = alunos.findIndex((a) => a.id === id)
-    if (index === -1) {
-      throw new Error("Aluno não encontrado")
+      if (data.nomeCompleto) backendData.nomeCompleto = data.nomeCompleto
+      if (data.email) backendData.email = data.email
+      if (data.dataNascimento) backendData.dataNascimento = data.dataNascimento
+      if (data.sexo) backendData.sexo = data.sexo
+      if (data.altura !== undefined) backendData.altura = data.altura
+      if (data.peso !== undefined) backendData.peso = data.peso
+      if (data.plano) backendData.plano = data.plano
+      if (data.tipoPlano) backendData.tipoPlano = data.tipoPlano
+      if (data.objetivo) backendData.objetivo = data.objetivo
+      if (data.jaTreinava !== undefined) backendData.jaTreinava = data.jaTreinava
+      if (data.restricaoAlimentar !== undefined) backendData.restricaoAlimentar = data.restricaoAlimentar || null
+      if (data.restricaoExercicio !== undefined) backendData.restricaoExercicio = data.restricaoExercicio || null
+      if (data.historicoMedico !== undefined) backendData.historicoMedico = data.historicoMedico || null
+      if (data.frequenciaFotos) backendData.frequenciaFotos = data.frequenciaFotos
+      if (data.observacoes !== undefined) backendData.observacoes = data.observacoes || null
+      if (data.senha) backendData.senha = data.senha
+      if (data.contato !== undefined) backendData.contato = data.contato
+
+      const response = await apiService.put<{ success: boolean; data: any }>(`/students/${id}`, backendData)
+
+      return transformAlunoFromBackend(response.data)
+    } catch (error) {
+      console.error("Error updating aluno:", error)
+      throw error
     }
-
-    const updatedAluno: Aluno = {
-      ...alunos[index],
-      ...data,
-      updatedAt: new Date(),
-    }
-
-    alunos[index] = updatedAluno
-    return updatedAluno
   },
 
   delete: async (id: string): Promise<void> => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    alunos = alunos.filter((a) => a.id !== id)
-  },
-
-  toggleStatus: async (id: string): Promise<Aluno> => {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    const index = alunos.findIndex((a) => a.id === id)
-    if (index === -1) {
-      throw new Error("Aluno não encontrado")
+    try {
+      await apiService.delete(`/students/${id}`)
+    } catch (error) {
+      console.error("Error deleting aluno:", error)
+      throw error
     }
-
-    alunos[index] = {
-      ...alunos[index],
-      ativo: !alunos[index].ativo,
-      updatedAt: new Date(),
-    }
-
-    return alunos[index]
   },
 }

@@ -1,49 +1,60 @@
-export type Sexo = "masculino" | "feminino" | "outro"
+export type Sexo = "MASCULINO" | "FEMININO"
 
-export type Plano = "mensal" | "trimestral" | "semestral" | "anual"
+export type Plano = "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL"
 
-export type TipoPlano = "treino" | "dieta" | "full"
+export type TipoPlano = "DIETA" | "TREINO" | "FULL"
 
-export type Objetivo = "perda_peso" | "hipertrofia" | "definicao" | "saude" | "performance" | "reabilitacao"
+export type Objetivo =
+  | "PERDA_PESO"
+  | "HIPERTROFIA"
+  | "DEFINICAO"
+  | "SAUDE"
+  | "PERFORMANCE"
+  | "REABILITACAO"
 
-export type FrequenciaFotos = "semanal" | "quinzenal" | "mensal"
+
+export type FrequenciaFotos = "SEMANAL" | "QUINZENAL" | "MENSAL"
 
 export interface Aluno {
   id: string
   nomeCompleto: string
-  idade: number
+  nomeAluno?: string
+  idade?: number
+  dataNascimento?: string
   sexo: Sexo
-  altura: number // em cm
-  peso: number // em kg
+  altura: number
+  peso: number
   email: string
-  contato: string
+  contato?: string
   plano: Plano
+  duracaoPlano?: Plano
   tipoPlano: TipoPlano
   objetivo: Objetivo
-  jaTreinava: boolean
+  jaTreinava?: boolean
   restricaoAlimentar?: string
   restricaoExercicio?: string
   historicoMedico?: string
   frequenciaFotos: FrequenciaFotos
   observacoes?: string
-  ativo: boolean
-  createdAt: Date
-  updatedAt: Date
+  ativo?: boolean
+  coachId?: string
+  createdAt: Date | string
+  updatedAt: Date | string
 }
 
 export interface AlunoFormData {
   nomeCompleto: string
-  idade: number
+  dataNascimento: string
   sexo: Sexo
   altura: number
   peso: number
   email: string
-  senha: string
-  contato: string
+  senha?: string
+  contato?: string
   plano: Plano
   tipoPlano: TipoPlano
-  objetivo: Objetivo
-  jaTreinava: boolean
+  objetivo: string
+  jaTreinava?: boolean
   restricaoAlimentar?: string
   restricaoExercicio?: string
   historicoMedico?: string
@@ -52,35 +63,47 @@ export interface AlunoFormData {
 }
 
 export const SEXO_LABELS: Record<Sexo, string> = {
-  masculino: "Masculino",
-  feminino: "Feminino",
-  outro: "Outro",
+  MASCULINO: "Masculino",
+  FEMININO: "Feminino",
 }
 
 export const PLANO_LABELS: Record<Plano, string> = {
-  mensal: "Mensal",
-  trimestral: "Trimestral",
-  semestral: "Semestral",
-  anual: "Anual",
+  MENSAL: "Mensal",
+  TRIMESTRAL: "Trimestral",
+  SEMESTRAL: "Semestral",
+  ANUAL: "Anual",
 }
 
 export const TIPO_PLANO_LABELS: Record<TipoPlano, string> = {
-  treino: "Treino",
-  dieta: "Dieta",
-  full: "Full (Treino + Dieta)",
+  DIETA: "Dieta",
+  TREINO: "Treino",
+  FULL: "Full (Treino + Dieta)",
 }
+
+export const OBJETIVO_OPTIONS = ["Perda de Peso", "Hipertrofia", "Definição", "Saúde", "Performance", "Reabilitação"]
 
 export const OBJETIVO_LABELS: Record<Objetivo, string> = {
-  perda_peso: "Perda de Peso",
-  hipertrofia: "Hipertrofia",
-  definicao: "Definição",
-  saude: "Saúde",
-  performance: "Performance",
-  reabilitacao: "Reabilitação",
+  PERDA_PESO: "Perda de Peso",
+  HIPERTROFIA: "Hipertrofia",
+  DEFINICAO: "Definição",
+  SAUDE: "Saúde",
+  PERFORMANCE: "Performance",
+  REABILITACAO: "Reabilitação",
 }
 
+
+export const OBJETIVO_VALUES: Objetivo[] = [
+  "PERDA_PESO",
+  "HIPERTROFIA",
+  "DEFINICAO",
+  "SAUDE",
+  "PERFORMANCE",
+  "REABILITACAO",
+]
+
+
 export const FREQUENCIA_FOTOS_LABELS: Record<FrequenciaFotos, string> = {
-  semanal: "Semanal",
-  quinzenal: "Quinzenal",
-  mensal: "Mensal",
+  SEMANAL: "Semanal",
+  QUINZENAL: "Quinzenal",
+  MENSAL: "Mensal",
 }

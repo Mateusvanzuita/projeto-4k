@@ -18,14 +18,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Check for existing session on mount
+  // Check for existing session on mount and validate with backend
   useEffect(() => {
     const initAuth = async () => {
       try {
         const storedUser = authService.getStoredUser()
-        if (storedUser) {
-          setUser(storedUser)
-          // TODO: Validate token with backend when integrated
+        const token = authService.getToken()
+
+        if (storedUser && token) {
+          // Validate token with backend
+          try {
+            const profile = await authService.getProfile()
+            setUser(profile)
+          } catch (error) {
+            console.error("Token validation failed:", error)
+            authService.clearStorage()
+            setUser(null)
+          }
         }
       } catch (error) {
         console.error("Error initializing auth:", error)
@@ -37,32 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth()
   }, [])
 
-  // Setup token refresh interval
-  useEffect(() => {
-    if (user) {
-      const interval = setInterval(
-        async () => {
-          try {
-            await refreshToken()
-          } catch (error) {
-            console.error("Token refresh failed:", error)
-            await logout()
-          }
-        },
-        14 * 60 * 1000, // Refresh every 14 minutes (tokens usually expire in 15 min)
-      )
-
-      return () => clearInterval(interval)
-    }
-  }, [user])
-
   const login = async (email: string, password: string, rememberMe = false): Promise<User> => {
     try {
       const response = await authService.login(email, password)
 
-      // Store tokens and user data
-      authService.storeTokens(response.accessToken, response.refreshToken, rememberMe)
-      authService.storeUser(response.user)
+      // Store token and user data
+      authService.storeToken(response.token, rememberMe)
+      authService.storeUser(response.user, rememberMe)
 
       setUser(response.user)
       return response.user
@@ -83,12 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const refreshToken = async (): Promise<void> => {
-    try {
-      const newAccessToken = await authService.refreshAccessToken()
-      // Token refreshed successfully
-    } catch (error) {
-      throw error
-    }
+    // Backend doesn't have refresh endpoint yet
+    // If needed in future, implement here
   }
 
   return (

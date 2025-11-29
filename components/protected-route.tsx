@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedRoles?: ("coach" | "aluno")[]
+  allowedRoles?: ("COACH" | "STUDENT")[]
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
@@ -20,9 +20,9 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     if (!isLoading) {
       if (!user) {
         router.push("/auth/login")
-      } else if (allowedRoles && !allowedRoles.includes(user.role)) {
-        // Redirect to appropriate dashboard if role not allowed
-        if (user.role === "coach") {
+      } else if (allowedRoles && !allowedRoles.includes(user.userType)) {
+        // Redirect to appropriate dashboard if userType not allowed
+        if (user.userType === "COACH") {
           router.push("/coach/dashboard")
         } else {
           router.push("/aluno/dashboard")
@@ -39,7 +39,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     )
   }
 
-  if (!user || (allowedRoles && !allowedRoles.includes(user.role))) {
+  if (!user || (allowedRoles && !allowedRoles.includes(user.userType))) {
     return null
   }
 
