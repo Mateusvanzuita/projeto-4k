@@ -13,7 +13,7 @@ class AuthService {
    */
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      const response = await fetch(`${this.apiUrl}/auth/login`, {
+      const response = await fetch(`${this.apiUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -37,7 +37,7 @@ class AuthService {
    */
   async getProfile(): Promise<User> {
     try {
-      const response = await fetch(`${this.apiUrl}/auth/profile`, {
+      const response = await fetch(`${this.apiUrl}/api/auth/profile`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

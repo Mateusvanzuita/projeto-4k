@@ -24,7 +24,7 @@ class ApiService {
       if (response.status === 401) {
         authService.clearStorage()
         if (typeof window !== "undefined") {
-          window.location.href = "/auth/login"
+          window.location.href = "/api/auth/login"
         }
         throw new Error("Sessão expirada. Faça login novamente.")
       }
