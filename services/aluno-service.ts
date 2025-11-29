@@ -72,7 +72,7 @@ export const alunoService = {
 
   getById: async (id: string): Promise<Aluno | null> => {
     try {
-      const response = await apiService.get<{ success: boolean; data: any }>(`/students/${id}`)
+      const response = await apiService.get<{ success: boolean; data: any }>(`/api/students/${id}`)
       return response.data ? transformAlunoFromBackend(response.data) : null
     } catch (error) {
       console.error("Error fetching aluno:", error)
@@ -102,7 +102,7 @@ export const alunoService = {
         contato: data.contato,
       }
 
-      const response = await apiService.post<{ success: boolean; data: any }>("/students", backendData)
+      const response = await apiService.post<{ success: boolean; data: any }>("/api/students", backendData)
       return transformAlunoFromBackend(response.data)
     } catch (error) {
       console.error("Error creating aluno:", error)
@@ -132,7 +132,7 @@ export const alunoService = {
       if (data.senha) backendData.senha = data.senha
       if (data.contato !== undefined) backendData.contato = data.contato
 
-      const response = await apiService.put<{ success: boolean; data: any }>(`/students/${id}`, backendData)
+      const response = await apiService.put<{ success: boolean; data: any }>(`/api/students/${id}`, backendData)
 
       return transformAlunoFromBackend(response.data)
     } catch (error) {
@@ -143,7 +143,7 @@ export const alunoService = {
 
   delete: async (id: string): Promise<void> => {
     try {
-      await apiService.delete(`/students/${id}`)
+      await apiService.delete(`/api/students/${id}`)
     } catch (error) {
       console.error("Error deleting aluno:", error)
       throw error
