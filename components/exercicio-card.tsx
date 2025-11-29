@@ -1,8 +1,8 @@
 "use client"
 
-import { Edit2, Trash2, Youtube } from "lucide-react"
+import { Edit, Trash2, Dumbbell, SquarePlay } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Exercicio } from "@/types/exercicio"
 
@@ -12,7 +12,7 @@ interface ExercicioCardProps {
   onDelete: (id: string) => void
 }
 
-const grupoLabels: Record<string, string> = {
+const GRUPO_LABELS: Record<string, string> = {
   peito: "Peito",
   costas: "Costas",
   ombros: "Ombros",
@@ -27,48 +27,88 @@ const grupoLabels: Record<string, string> = {
   "corpo-inteiro": "Corpo Inteiro",
 }
 
-const grupoColors: Record<string, string> = {
-  peito: "bg-red-100 text-red-800",
-  costas: "bg-blue-100 text-blue-800",
-  ombros: "bg-purple-100 text-purple-800",
-  biceps: "bg-green-100 text-green-800",
-  triceps: "bg-yellow-100 text-yellow-800",
-  pernas: "bg-orange-100 text-orange-800",
-  gluteos: "bg-pink-100 text-pink-800",
-  abdomen: "bg-cyan-100 text-cyan-800",
-  panturrilha: "bg-indigo-100 text-indigo-800",
-  antebraco: "bg-teal-100 text-teal-800",
-  cardio: "bg-rose-100 text-rose-800",
-  "corpo-inteiro": "bg-violet-100 text-violet-800",
+const GRUPO_COLORS: Record<string, string> = {
+  peito: "bg-red-500/10 text-red-700 border-red-200",
+  costas: "bg-blue-500/10 text-blue-700 border-blue-200",
+  ombros: "bg-purple-500/10 text-purple-700 border-purple-200",
+  biceps: "bg-green-500/10 text-green-700 border-green-200",
+  triceps: "bg-yellow-500/10 text-yellow-700 border-yellow-200",
+  pernas: "bg-orange-500/10 text-orange-700 border-orange-200",
+  gluteos: "bg-pink-500/10 text-pink-700 border-pink-200",
+  abdomen: "bg-cyan-500/10 text-cyan-700 border-cyan-200",
+  panturrilha: "bg-indigo-500/10 text-indigo-700 border-indigo-200",
+  antebraco: "bg-teal-500/10 text-teal-700 border-teal-200",
+  cardio: "bg-rose-500/10 text-rose-700 border-rose-200",
+  "corpo-inteiro": "bg-violet-500/10 text-violet-700 border-violet-200",
 }
 
-const dificuldadeLabels: Record<string, string> = {
+const DIFICULDADE_LABELS: Record<string, string> = {
   leve: "Leve",
   medio: "Médio",
   pesado: "Pesado",
 }
 
+const EQUIPAMENTO_LABELS: Record<string, string> = {
+  "peso-livre": "Peso Livre",
+  maquina: "Máquina",
+  "peso-corporal": "Peso Corporal",
+  elastico: "Elástico",
+  cabo: "Cabo",
+  outro: "Outro",
+}
+
 export function ExercicioCard({ exercicio, onEdit, onDelete }: ExercicioCardProps) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-lg">{exercicio.nome}</CardTitle>
-          <Badge className={grupoColors[exercicio.grupoMuscular]} variant="secondary">
-            {grupoLabels[exercicio.grupoMuscular]}
-          </Badge>
+    <Card className="p-4 hover:shadow-md transition-shadow">
+      {/* Header com título e botões */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Dumbbell className="w-5 h-5 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-lg truncate">{exercicio.nome}</h3>
+            <Badge className={GRUPO_COLORS[exercicio.grupoMuscular] || "bg-gray-500/10 text-gray-700"}>
+              {GRUPO_LABELS[exercicio.grupoMuscular] || exercicio.grupoMuscular}
+            </Badge>
+          </div>
         </div>
-      </CardHeader>
+        <div className="flex gap-2 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(exercicio)
+            }}
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(exercicio.id)
+            }}
+          >
+            <Trash2 className="w-4 h-4 text-destructive" />
+          </Button>
+        </div>
+      </div>
 
-      <CardContent className="space-y-2">
+      {/* Informações do exercício */}
+      <div className="space-y-2">
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
-            <p className="text-muted-foreground">Equipamento</p>
-            <p className="font-semibold capitalize">{exercicio.equipamento.replace("-", " ")}</p>
+            <p className="text-xs text-muted-foreground">Equipamento</p>
+            <p className="font-medium">
+              {EQUIPAMENTO_LABELS[exercicio.equipamento] || exercicio.equipamento}
+            </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Dificuldade</p>
-            <p className="font-semibold">{dificuldadeLabels[exercicio.dificuldade]}</p>
+            <p className="text-xs text-muted-foreground">Dificuldade</p>
+            <p className="font-medium">{DIFICULDADE_LABELS[exercicio.dificuldade]}</p>
           </div>
         </div>
 
@@ -77,36 +117,21 @@ export function ExercicioCard({ exercicio, onEdit, onDelete }: ExercicioCardProp
             href={exercicio.videoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Youtube className="h-4 w-4" />
-            Ver vídeo
+            <SquarePlay className="h-4 w-4" />
+            Ver vídeo demonstrativo
           </a>
         )}
 
         {exercicio.observacoes && (
-          <div className="text-sm">
-            <p className="text-muted-foreground">Observações</p>
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground mb-1">Observações</p>
             <p className="text-sm line-clamp-2">{exercicio.observacoes}</p>
           </div>
         )}
-      </CardContent>
-
-      <CardFooter className="flex gap-2 pt-3">
-        <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => onEdit(exercicio)}>
-          <Edit2 className="h-4 w-4 mr-1" />
-          Editar
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 text-destructive hover:text-destructive bg-transparent"
-          onClick={() => onDelete(exercicio.id)}
-        >
-          <Trash2 className="h-4 w-4 mr-1" />
-          Excluir
-        </Button>
-      </CardFooter>
+      </div>
     </Card>
   )
 }

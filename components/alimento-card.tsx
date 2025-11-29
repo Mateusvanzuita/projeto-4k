@@ -1,8 +1,8 @@
 "use client"
 
-import { Edit2, Trash2 } from "lucide-react"
+import { Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Alimento } from "@/types/alimento"
 
@@ -12,75 +12,72 @@ interface AlimentoCardProps {
   onDelete: (id: string) => void
 }
 
-const tipoLabels: Record<string, string> = {
-  carboidrato: "Carboidrato",
-  proteina: "Proteína",
-  gordura: "Gordura",
-  fibra: "Fibra",
-  vegetal: "Vegetal",
-  fruta: "Fruta",
-  outro: "Outro",
+const CATEGORIA_LABELS: Record<string, string> = {
+  CARBOIDRATO: "Carboidrato",
+  PROTEINA: "Proteína",
+  GORDURA: "Gordura",
+  FIBRA: "Fibra",
+  VEGETAL: "Vegetal",
+  FRUTA: "Fruta",
+  LATICINIO: "Laticínio",
+  OUTRO: "Outro",
 }
 
-const tipoColors: Record<string, string> = {
-  carboidrato: "bg-blue-100 text-blue-800",
-  proteina: "bg-red-100 text-red-800",
-  gordura: "bg-yellow-100 text-yellow-800",
-  fibra: "bg-green-100 text-green-800",
-  vegetal: "bg-emerald-100 text-emerald-800",
-  fruta: "bg-purple-100 text-purple-800",
-  outro: "bg-gray-100 text-gray-800",
+const CATEGORIA_COLORS: Record<string, string> = {
+  CARBOIDRATO: "bg-blue-500/10 text-blue-700 border-blue-200",
+  PROTEINA: "bg-red-500/10 text-red-700 border-red-200",
+  GORDURA: "bg-yellow-500/10 text-yellow-700 border-yellow-200",
+  FIBRA: "bg-green-500/10 text-green-700 border-green-200",
+  VEGETAL: "bg-emerald-500/10 text-emerald-700 border-emerald-200",
+  FRUTA: "bg-purple-500/10 text-purple-700 border-purple-200",
+  LATICINIO: "bg-orange-500/10 text-orange-700 border-orange-200",
+  OUTRO: "bg-gray-500/10 text-gray-700 border-gray-200",
 }
 
 export function AlimentoCard({ alimento, onEdit, onDelete }: AlimentoCardProps) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-lg">{alimento.nome}</CardTitle>
-          <Badge className={tipoColors[alimento.tipo]} variant="secondary">
-            {tipoLabels[alimento.tipo]}
+    <Card className="p-4 hover:shadow-md transition-shadow">
+      {/* Header com título e botões */}
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h3 className="font-semibold text-lg">{alimento.nome}</h3>
+          <Badge 
+            className={CATEGORIA_COLORS[alimento.categoria] || CATEGORIA_COLORS.OUTRO}
+          >
+            {CATEGORIA_LABELS[alimento.categoria] || alimento.categoria}
           </Badge>
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-2">
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <p className="text-muted-foreground">Calorias</p>
-            <p className="font-semibold">{alimento.calorias} kcal</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Quantidade</p>
-            <p className="font-semibold">
-              {alimento.quantidadePadrao} {alimento.unidadeMedida}
-            </p>
-          </div>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(alimento)
+            }}
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(alimento.id)
+            }}
+          >
+            <Trash2 className="w-4 h-4 text-destructive" />
+          </Button>
         </div>
+      </div>
 
-        {alimento.observacoes && (
-          <div className="text-sm">
-            <p className="text-muted-foreground">Observações</p>
-            <p className="text-sm line-clamp-2">{alimento.observacoes}</p>
-          </div>
-        )}
-      </CardContent>
-
-      <CardFooter className="flex gap-2 pt-3">
-        <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => onEdit(alimento)}>
-          <Edit2 className="h-4 w-4 mr-1" />
-          Editar
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 text-destructive hover:text-destructive bg-transparent"
-          onClick={() => onDelete(alimento.id)}
-        >
-          <Trash2 className="h-4 w-4 mr-1" />
-          Excluir
-        </Button>
-      </CardFooter>
+      {/* Observações */}
+      {alimento.observacoes && (
+        <div className="mt-3 pt-3 border-t">
+          <p className="text-xs text-muted-foreground mb-1">Observações</p>
+          <p className="text-sm line-clamp-2">{alimento.observacoes}</p>
+        </div>
+      )}
     </Card>
   )
 }

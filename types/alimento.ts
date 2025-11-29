@@ -1,12 +1,16 @@
-export type TipoAlimento = "carboidrato" | "proteina" | "gordura" | "fibra" | "vegetal" | "fruta" | "outro"
+export type TipoAlimento =
+  "CARBOIDRATO" |
+  "PROTEINA" |
+  "GORDURA" |
+  "FRUTA" |
+  "VEGETAL" |
+  "LATICINIO" |
+  "OUTRO"
 
 export interface Alimento {
   id: string
   nome: string
-  tipo: TipoAlimento
-  calorias: number
-  quantidadePadrao: number
-  unidadeMedida: "g" | "ml"
+  categoria: TipoAlimento
   observacoes?: string
   createdAt: Date
   updatedAt: Date
@@ -14,9 +18,6 @@ export interface Alimento {
 
 export interface AlimentoFormData {
   nome: string
-  tipo: TipoAlimento
-  calorias: number
-  quantidadePadrao: number
-  unidadeMedida: "g" | "ml"
+  categoria: TipoAlimento
   observacoes?: string
 }

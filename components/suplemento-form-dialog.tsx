@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { type Suplemento, type SuplementoFormData, TIPOS_SUPLEMENTO } from "@/types/suplemento"
+import { type Suplemento, type SuplementoFormData, TIPOS_SUPLEMENTO, type TipoSuplemento, type CategoriaSuplemento, CATEGORIAS_SUPLEMENTO } from "@/types/suplemento"
 
 interface SuplementoFormDialogProps {
   open: boolean
@@ -19,6 +19,15 @@ interface SuplementoFormDialogProps {
   isLoading?: boolean
 }
 
+const initialFormData: SuplementoFormData = {
+  nomeSuplemento: "",
+  nomeManipulado: "",
+  tipo: "SUPLEMENTO", 
+  categoria: "OUTRO" as CategoriaSuplemento, 
+  observacoes: "",
+  contraindicacoes: "", 
+}
+
 export function SuplementoFormDialog({
   open,
   onOpenChange,
@@ -26,62 +35,80 @@ export function SuplementoFormDialog({
   suplemento,
   isLoading = false,
 }: SuplementoFormDialogProps) {
-  const [formData, setFormData] = useState<SuplementoFormData>({
-    nome: "",
-    tipo: "suplemento",
-    doseRecomendada: "",
-    marca: "",
-    observacoes: "",
-  })
+  const [formData, setFormData] = useState<SuplementoFormData>(initialFormData)
 
   useEffect(() => {
     if (suplemento) {
       setFormData({
-        nome: suplemento.nome,
+        nomeSuplemento: suplemento.nomeSuplemento || "",
+        nomeManipulado: suplemento.nomeManipulado || "",
         tipo: suplemento.tipo,
-        doseRecomendada: suplemento.doseRecomendada,
-        marca: suplemento.marca,
+        categoria: suplemento.categoria,
         observacoes: suplemento.observacoes || "",
+        contraindicacoes: suplemento.contraindicacoes || "",
       })
     } else {
-      setFormData({
-        nome: "",
-        tipo: "suplemento",
-        doseRecomendada: "",
-        marca: "",
-        observacoes: "",
-      })
+      setFormData(initialFormData)
     }
   }, [suplemento, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+    
+    // Simple frontend validation for required name based on type
+    if (formData.tipo === "SUPLEMENTO" && !formData.nomeSuplemento?.trim()) {
+      alert("Para tipo Suplemento, o nome do suplemento é obrigatório.")
+      return
+    }
+    if (formData.tipo === "MANIPULADO" && !formData.nomeManipulado?.trim()) {
+      alert("Para tipo Manipulado, o nome do manipulado é obrigatório.")
+      return
+    }
+    
+    // Clean up empty strings to be 'undefined' or omit for optional fields
+    const dataToSubmit: SuplementoFormData = {
+        ...formData,
+        nomeSuplemento: formData.nomeSuplemento?.trim() || undefined,
+        nomeManipulado: formData.nomeManipulado?.trim() || undefined,
+        observacoes: formData.observacoes?.trim() || undefined,
+        contraindicacoes: formData.contraindicacoes?.trim() || undefined,
+    }
+    
+    // Ensure only one name field is sent (Prisma best practice)
+    if (dataToSubmit.tipo === "SUPLEMENTO") {
+        delete dataToSubmit.nomeManipulado
+    } else {
+        delete dataToSubmit.nomeSuplemento
+    }
+    
+    onSubmit(dataToSubmit as SuplementoFormData)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{suplemento ? "Editar Suplemento" : "Adicionar Suplemento"}</DialogTitle>
+          <DialogTitle>{suplemento ? "Atualizar Suplemento" : "Adicionar Novo Suplemento"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="nome">Nome *</Label>
-            <Input
-              id="nome"
-              value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              placeholder="Ex: Whey Protein"
-              required
-            />
-          </div>
-
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          
+          {/* Tipo (SUPLEMENTO/MANIPULADO) */}
           <div className="space-y-2">
             <Label htmlFor="tipo">Tipo *</Label>
-            <Select value={formData.tipo} onValueChange={(value) => setFormData({ ...formData, tipo: value as any })}>
-              <SelectTrigger>
-                <SelectValue />
+            <Select
+              value={formData.tipo}
+              onValueChange={(value: TipoSuplemento) => 
+                setFormData(prev => ({ 
+                  ...prev, 
+                  tipo: value,
+                  // Limpar o campo de nome que não será mais usado
+                  nomeSuplemento: value === "MANIPULADO" ? "" : prev.nomeSuplemento,
+                  nomeManipulado: value === "SUPLEMENTO" ? "" : prev.nomeManipulado,
+                }))
+              }
+            >
+              <SelectTrigger id="tipo">
+                <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
                 {TIPOS_SUPLEMENTO.map((tipo) => (
@@ -93,28 +120,58 @@ export function SuplementoFormDialog({
             </Select>
           </div>
 
+          {/* Categoria (NOVO CAMPO) */}
           <div className="space-y-2">
-            <Label htmlFor="doseRecomendada">Dose Recomendada *</Label>
+            <Label htmlFor="categoria">Categoria *</Label>
+            <Select
+              value={formData.categoria}
+              onValueChange={(value: CategoriaSuplemento) => setFormData({ ...formData, categoria: value })}
+            >
+              <SelectTrigger id="categoria">
+                <SelectValue placeholder="Selecione a categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIAS_SUPLEMENTO.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Nome do Suplemento / Manipulado (CONDICIONAL) */}
+          <div className="space-y-2">
+            <Label htmlFor="nome">
+              {formData.tipo === "SUPLEMENTO" ? "Nome do Suplemento" : "Nome do Manipulado"} *
+            </Label>
             <Input
-              id="doseRecomendada"
-              value={formData.doseRecomendada}
-              onChange={(e) => setFormData({ ...formData, doseRecomendada: e.target.value })}
-              placeholder="Ex: 30g ou 2 cápsulas"
+              id="nome"
+              value={
+                formData.tipo === "SUPLEMENTO"
+                  ? formData.nomeSuplemento
+                  : formData.nomeManipulado
+              }
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  ...(formData.tipo === "SUPLEMENTO"
+                    ? { nomeSuplemento: e.target.value }
+                    : { nomeManipulado: e.target.value }),
+                })
+              }
+              placeholder={
+                formData.tipo === "SUPLEMENTO"
+                  ? "Ex: Whey Protein Concentrado"
+                  : "Ex: ZMA com Picolinato de Cromo"
+              }
               required
             />
           </div>
+          
+          {/* Dose Recomendada e Marca Removidos */}
 
-          <div className="space-y-2">
-            <Label htmlFor="marca">Marca / Fornecedor *</Label>
-            <Input
-              id="marca"
-              value={formData.marca}
-              onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-              placeholder="Ex: Optimum Nutrition"
-              required
-            />
-          </div>
-
+          {/* Observações */}
           <div className="space-y-2">
             <Label htmlFor="observacoes">Observações</Label>
             <Textarea
@@ -122,6 +179,18 @@ export function SuplementoFormDialog({
               value={formData.observacoes}
               onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
               placeholder="Informações adicionais..."
+              rows={3}
+            />
+          </div>
+          
+          {/* Contraindicações (NOVO CAMPO) */}
+          <div className="space-y-2">
+            <Label htmlFor="contraindicacoes">Contraindicações</Label>
+            <Textarea
+              id="contraindicacoes"
+              value={formData.contraindicacoes}
+              onChange={(e) => setFormData({ ...formData, contraindicacoes: e.target.value })}
+              placeholder="Alergias, restrições médicas, etc."
               rows={3}
             />
           </div>

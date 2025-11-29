@@ -1,141 +1,188 @@
-import type { Exercicio, ExercicioFormData, GrupoMuscular, Equipamento } from "@/types/exercicio"
+// src/services/exercicio-service.ts
 
-// Mock data - será substituído pela API real
-const mockExercicios: Exercicio[] = [
-  {
-    id: "1",
-    nome: "Supino Reto",
-    grupoMuscular: "peito",
-    equipamento: "barra",
-    dificuldade: "medio",
-    videoUrl: "https://www.youtube.com/watch?v=example1",
-    observacoes: "Manter os cotovelos a 45 graus",
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-15"),
-  },
-  {
-    id: "2",
-    nome: "Agachamento Livre",
-    grupoMuscular: "pernas",
-    equipamento: "barra",
-    dificuldade: "pesado",
-    videoUrl: "https://www.youtube.com/watch?v=example2",
-    observacoes: "Descer até paralelo ao chão",
-    createdAt: new Date("2024-01-16"),
-    updatedAt: new Date("2024-01-16"),
-  },
-  {
-    id: "3",
-    nome: "Remada Curvada",
-    grupoMuscular: "costas",
-    equipamento: "barra",
-    dificuldade: "medio",
-    videoUrl: "https://www.youtube.com/watch?v=example3",
-    observacoes: "Variação: pode fazer com joelhos apoiados",
-    createdAt: new Date("2024-01-17"),
-    updatedAt: new Date("2024-01-17"),
-  },
-  {
-    id: "4",
-    nome: "Desenvolvimento com Halteres",
-    grupoMuscular: "ombros",
-    equipamento: "halteres",
-    dificuldade: "medio",
-    createdAt: new Date("2024-01-18"),
-    updatedAt: new Date("2024-01-18"),
-  },
-  {
-    id: "5",
-    nome: "Flexão de Braço",
-    grupoMuscular: "peito",
-    equipamento: "peso-corporal",
-    dificuldade: "leve",
-    videoUrl: "https://www.youtube.com/watch?v=example5",
-    observacoes: "Variação: pode fazer com joelhos apoiados",
-    createdAt: new Date("2024-01-19"),
-    updatedAt: new Date("2024-01-19"),
-  },
-  {
-    id: "6",
-    nome: "Leg Press 45°",
-    grupoMuscular: "pernas",
-    equipamento: "maquina",
-    dificuldade: "medio",
-    createdAt: new Date("2024-01-20"),
-    updatedAt: new Date("2024-01-20"),
-  },
-]
+import type { Exercicio, ExercicioFormData, GrupoMuscular, Equipamento, Dificuldade } from "@/types/exercicio"
+import { apiService } from "./api-service"
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+// --- Mapeamentos ---
+// Mapeia ENUMs do Frontend (exercicio.ts) para ENUMs do Backend (schema.prisma)
+const grupoMuscularToBackend: Record<GrupoMuscular, string> = {
+  // Ajuste conforme seus tipos de frontend
+  "peito": "PEITO",
+  "costas": "COSTAS",
+  "ombros": "OMBROS",
+  "biceps": "BRACOS", // Exemplo de mapeamento
+  "triceps": "BRACOS", // Exemplo de mapeamento
+  "pernas": "PERNAS",
+  "gluteos": "GLUTEOS",
+  "abdomen": "ABDOMEN",
+  "panturrilha": "PANTURRILHA",
+  "antebraco": "ANTEBRACO",
+  "cardio": "AEROBICO", // Mapeamento de grupo para tipo no backend
+  "corpo-inteiro": "CORPO_INTEIRO",
+}
+
+const equipamentoToTipoExercicio: Record<Equipamento, string> = {
+  "barra": "FORCA",
+  "halteres": "FORCA",
+  "maquina": "FORCA",
+  "peso-corporal": "FUNCIONAL",
+  "cabo": "FORCA",
+  "kettlebell": "FORCA",
+  "elastico": "MOBILIDADE",
+  "medicine-ball": "FUNCIONAL",
+  "outros": "FORCA",
+}
+
+const dificuldadeToCategoria: Record<Dificuldade, string> = {
+  "leve": "INICIANTE",
+  "medio": "INTERMEDIARIO",
+  "pesado": "AVANCADO",
+}
+// --- Fim Mapeamentos ---
+
+interface ExercicioListResponse {
+  success: boolean
+  data: {
+    exercicios: any[] // Usamos any[] aqui para mapear depois
+    pagination?: {
+      page: number
+      limit: number
+      total: number
+      totalPages: number
+    }
+  }
+}
+
+// 📄 Função de Transformação (Backend -> Frontend)
+function transformExercicioFromBackend(back: any): Exercicio {
+    // 💡 OBS: O mapeamento inverso do Backend para o Frontend é mais complexo, 
+    // pois o backend usa 'tipoExercicio' e 'categoria', e o frontend usa 'equipamento' e 'dificuldade'.
+    // Você precisa decidir como remapear os ENUMs do backend para os tipos do frontend.
+    // Por simplicidade, vamos usar um mapeamento direto de string/fallback por agora:
+
+    const tipoExercicioToEquipamento: Record<string, Equipamento> = {
+        "FORCA": "barra",
+        "AEROBICO": "peso-corporal",
+        "MOBILIDADE": "elastico",
+        "FLEXIBILIDADE": "peso-corporal",
+        "FUNCIONAL": "peso-corporal",
+        "CARDIO": "peso-corporal",
+    }
+    const categoriaToDificuldade: Record<string, Dificuldade> = {
+        "INICIANTE": "leve",
+        "INTERMEDIARIO": "medio",
+        "AVANCADO": "pesado",
+    }
+    
+    return {
+        id: back.id,
+        nome: back.nomeExercicio, // O backend usa nomeExercicio
+        grupoMuscular: back.grupoMuscular.toLowerCase() as GrupoMuscular, // O backend usa caixa alta
+        equipamento: tipoExercicioToEquipamento[back.tipoExercicio] || 'outros',
+        dificuldade: categoriaToDificuldade[back.categoria] || 'leve',
+        videoUrl: back.linkVideo || undefined, // O backend usa linkVideo
+        observacoes: back.descricao || undefined, // O backend usa descricao
+        createdAt: new Date(back.createdAt),
+        updatedAt: new Date(back.updatedAt),
+    }
+}
+
+// 📄 Função de Transformação (Frontend -> Backend)
+function transformExercicioToBackend(front: ExercicioFormData): any {
+    return {
+        nomeExercicio: front.nome,
+        grupoMuscular: grupoMuscularToBackend[front.grupoMuscular],
+        tipoExercicio: equipamentoToTipoExercicio[front.equipamento], // Mapeia equipamento para tipoExercicio
+        categoria: dificuldadeToCategoria[front.dificuldade], // Mapeia dificuldade para categoria
+        linkVideo: front.videoUrl || null,
+        descricao: front.observacoes || null,
+    }
+}
 
 export const exercicioService = {
-  async getAll(): Promise<Exercicio[]> {
-    await delay(300)
-    return [...mockExercicios]
-  },
+    // LISTAGEM (com paginação e filtros)
+    getAll: async (params?: { 
+        page?: number; 
+        limit?: number; 
+        grupoMuscular?: string; 
+        nomeExercicio?: string; 
+        orderBy?: string; 
+        order?: 'asc' | 'desc';
+    }) => {
+        try {
+            const queryParams = new URLSearchParams()
+            if (params?.page) queryParams.append("page", params.page.toString())
+            if (params?.limit) queryParams.append("limit", params.limit.toString())
+            if (params?.grupoMuscular) queryParams.append("grupoMuscular", grupoMuscularToBackend[params.grupoMuscular as GrupoMuscular])
+            if (params?.nomeExercicio) queryParams.append("nomeExercicio", params.nomeExercicio)
+            if (params?.orderBy) queryParams.append("orderBy", params.orderBy)
+            if (params?.order) queryParams.append("order", params.order)
 
-  async getById(id: string): Promise<Exercicio | null> {
-    await delay(200)
-    return mockExercicios.find((ex) => ex.id === id) || null
-  },
+            const endpoint = `/api/exercicios${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+            
+            const response = await apiService.get<ExercicioListResponse>(endpoint)
+            
+            return {
+                exercicios: response.data.exercicios.map(transformExercicioFromBackend),
+                pagination: response.data.pagination,
+            }
+        } catch (error) {
+            console.error("Error fetching exercicios:", error)
+            throw error
+        }
+    },
 
-  async create(data: ExercicioFormData): Promise<Exercicio> {
-    await delay(400)
+    getById: async (id: string): Promise<Exercicio> => {
+        try {
+            const response = await apiService.get<{ success: boolean; data: any }>(`/api/exercicios/${id}`)
+            return transformExercicioFromBackend(response.data)
+        } catch (error) {
+            console.error("Error fetching exercicio by ID:", error)
+            throw error
+        }
+    },
 
-    const newExercicio: Exercicio = {
-      id: Date.now().toString(),
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
+    create: async (data: ExercicioFormData): Promise<Exercicio> => {
+        try {
+            const backendData = transformExercicioToBackend(data)
+            const response = await apiService.post<{ success: boolean; data: any }>(`/api/exercicios`, backendData)
+            return transformExercicioFromBackend(response.data)
+        } catch (error) {
+            console.error("Error creating exercicio:", error)
+            throw error
+        }
+    },
 
-    mockExercicios.push(newExercicio)
-    return newExercicio
-  },
+    update: async (id: string, data: ExercicioFormData): Promise<Exercicio> => {
+        try {
+            const backendData = transformExercicioToBackend(data)
+            const response = await apiService.put<{ success: boolean; data: any }>(`/api/exercicios/${id}`, backendData)
+            return transformExercicioFromBackend(response.data)
+        } catch (error) {
+            console.error("Error updating exercicio:", error)
+            throw error
+        }
+    },
 
-  async update(id: string, data: ExercicioFormData): Promise<Exercicio> {
-    await delay(400)
-
-    const index = mockExercicios.findIndex((ex) => ex.id === id)
-    if (index === -1) {
-      throw new Error("Exercício não encontrado")
-    }
-
-    const updatedExercicio: Exercicio = {
-      ...mockExercicios[index],
-      ...data,
-      updatedAt: new Date(),
-    }
-
-    mockExercicios[index] = updatedExercicio
-    return updatedExercicio
-  },
-
-  async delete(id: string): Promise<void> {
-    await delay(300)
-
-    const index = mockExercicios.findIndex((ex) => ex.id === id)
-    if (index === -1) {
-      throw new Error("Exercício não encontrado")
-    }
-
-    mockExercicios.splice(index, 1)
-  },
-
-  async search(query: string): Promise<Exercicio[]> {
-    await delay(200)
-
-    const lowerQuery = query.toLowerCase()
-    return mockExercicios.filter((ex) => ex.nome.toLowerCase().includes(lowerQuery))
-  },
-
-  async filterByGrupoMuscular(grupo: GrupoMuscular): Promise<Exercicio[]> {
-    await delay(200)
-    return mockExercicios.filter((ex) => ex.grupoMuscular === grupo)
-  },
-
-  async filterByEquipamento(equipamento: Equipamento): Promise<Exercicio[]> {
-    await delay(200)
-    return mockExercicios.filter((ex) => ex.equipamento === equipamento)
-  },
+    delete: async (id: string): Promise<void> => {
+        try {
+            await apiService.delete(`/api/exercicios/${id}`)
+        } catch (error) {
+            console.error("Error deleting exercicio:", error)
+            throw error
+        }
+    },
+    
+    // Você também pode adicionar um método 'search' para filtros mais simples se preferir.
+    search: async (termo: string): Promise<Exercicio[]> => {
+        try {
+            const response = await apiService.get<ExercicioListResponse>(
+                `/api/exercicios?nomeExercicio=${termo}`
+            )
+            return response.data.exercicios.map(transformExercicioFromBackend)
+        } catch (error) {
+            console.error("Error searching exercicios:", error)
+            throw error
+        }
+    },
 }

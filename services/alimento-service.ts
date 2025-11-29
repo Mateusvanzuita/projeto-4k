@@ -1,111 +1,125 @@
-import type { Alimento, AlimentoFormData } from "@/types/alimento"
+import { Alimento } from "@/types/alimento"
+import { apiService } from "./api-service"
 
-// Mock data for development
-const mockAlimentos: Alimento[] = [
-  {
-    id: "1",
-    nome: "Arroz Branco",
-    tipo: "carboidrato",
-    calorias: 130,
-    quantidadePadrao: 100,
-    unidadeMedida: "g",
-    observacoes: "Cozido",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    nome: "Frango Grelhado",
-    tipo: "proteina",
-    calorias: 165,
-    quantidadePadrao: 100,
-    unidadeMedida: "g",
-    observacoes: "Peito sem pele",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "3",
-    nome: "Azeite de Oliva",
-    tipo: "gordura",
-    calorias: 884,
-    quantidadePadrao: 100,
-    unidadeMedida: "ml",
-    observacoes: "Extra virgem",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "4",
-    nome: "Brócolis",
-    tipo: "vegetal",
-    calorias: 34,
-    quantidadePadrao: 100,
-    unidadeMedida: "g",
-    observacoes: "Cozido no vapor",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-]
+interface AlimentoListResponse {
+  success: boolean
+  data: {
+    alimentos: Alimento[]
+    pagination?: {
+      page: number
+      limit: number
+      total: number
+      totalPages: number
+    }
+  }
+}
 
-// Simulate API delay
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+// 📄 Transformador (caso seu backend retorne outro formato)
+function transformAlimentoFromBackend(back: any): Alimento {
+  return {
+    id: back.id,
+    nome: back.nome,
+    categoria: back.categoria,
+    observacoes: back.observacoes || "",
+    createdAt: new Date(back.createdAt),
+    updatedAt: new Date(back.updatedAt),
+  }
+}
 
 export const alimentoService = {
-  async getAll(): Promise<Alimento[]> {
-    await delay(500)
-    return [...mockAlimentos]
-  },
+  // LISTAGEM (com paginação e filtros)
+  getAll: async (params?: { page?: number; limit?: number; tipo?: string; nome?: string }) => {
+    try {
+      const queryParams = new URLSearchParams()
+      if (params?.page) queryParams.append("page", params.page.toString())
+      if (params?.limit) queryParams.append("limit", params.limit.toString())
+      if (params?.tipo) queryParams.append("tipo", params.tipo)
+      if (params?.nome) queryParams.append("nome", params.nome)
 
-  async getById(id: string): Promise<Alimento | null> {
-    await delay(300)
-    return mockAlimentos.find((a) => a.id === id) || null
-  },
+      const endpoint = `/api/alimentos${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+      
+      // ✅ apiService.get() já retorna o JSON direto, não precisa de .data extra
+      const response = await apiService.get<AlimentoListResponse>(endpoint)
 
-  async create(data: AlimentoFormData): Promise<Alimento> {
-    await delay(500)
-    const newAlimento: Alimento = {
-      id: Date.now().toString(),
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      console.log('🔍 Response completa:', response) // Debug
+
+      // ✅ Acesso correto: response já é { success: true, data: {...} }
+      const rawAlimentos = response.data?.alimentos || []
+      const pagination = response.data?.pagination || null
+
+      console.log('🔍 Raw alimentos:', rawAlimentos) // Debug
+
+      const alimentos = rawAlimentos.map(transformAlimentoFromBackend)
+
+      console.log('✅ Alimentos transformados:', alimentos) // Debug
+
+      return { alimentos, pagination }
+    } catch (error) {
+      console.error("❌ Error fetching alimentos:", error)
+      throw error
     }
-    mockAlimentos.push(newAlimento)
-    return newAlimento
   },
 
-  async update(id: string, data: AlimentoFormData): Promise<Alimento> {
-    await delay(500)
-    const index = mockAlimentos.findIndex((a) => a.id === id)
-    if (index === -1) throw new Error("Alimento não encontrado")
-
-    const updatedAlimento: Alimento = {
-      ...mockAlimentos[index],
-      ...data,
-      updatedAt: new Date(),
+  getById: async (id: string): Promise<Alimento | null> => {
+    try {
+      const response = await apiService.get<{ success: boolean; data: any }>(`/api/alimentos/${id}`)
+      return response.data ? transformAlimentoFromBackend(response.data) : null
+    } catch (error) {
+      console.error("Error fetching alimento:", error)
+      return null
     }
-    mockAlimentos[index] = updatedAlimento
-    return updatedAlimento
   },
 
-  async delete(id: string): Promise<void> {
-    await delay(500)
-    const index = mockAlimentos.findIndex((a) => a.id === id)
-    if (index === -1) throw new Error("Alimento não encontrado")
-    mockAlimentos.splice(index, 1)
+  create: async (data: Alimento): Promise<Alimento> => {
+    try {
+      const response = await apiService.post<{ success: boolean; data: any }>(`/api/alimentos`, data)
+      return transformAlimentoFromBackend(response.data)
+    } catch (error) {
+      console.error("Error creating alimento:", error)
+      throw error
+    }
   },
 
-  async search(query: string): Promise<Alimento[]> {
-    await delay(300)
-    const lowerQuery = query.toLowerCase()
-    return mockAlimentos.filter(
-      (a) => a.nome.toLowerCase().includes(lowerQuery) || a.tipo.toLowerCase().includes(lowerQuery),
-    )
+  update: async (id: string, data: Partial<Alimento>): Promise<Alimento> => {
+    try {
+      const response = await apiService.put<{ success: boolean; data: any }>(`/api/alimentos/${id}`, data)
+      return transformAlimentoFromBackend(response.data)
+    } catch (error) {
+      console.error("Error updating alimento:", error)
+      throw error
+    }
   },
 
-  async filterByTipo(tipo: string): Promise<Alimento[]> {
-    await delay(300)
-    if (tipo === "todos") return [...mockAlimentos]
-    return mockAlimentos.filter((a) => a.tipo === tipo)
+  delete: async (id: string): Promise<void> => {
+    try {
+      await apiService.delete(`/api/alimentos/${id}`)
+    } catch (error) {
+      console.error("Error deleting alimento:", error)
+      throw error
+    }
+  },
+
+  filterByTipo: async (tipo: string): Promise<Alimento[]> => {
+    try {
+      const response = await apiService.get<{ success: boolean; data: any[] }>(
+        `/api/alimentos/categoria/${tipo}`
+      )
+      return response.data.map(transformAlimentoFromBackend)
+    } catch (error) {
+      console.error("Error filtering alimentos:", error)
+      throw error
+    }
+  },
+
+  search: async (termo: string): Promise<Alimento[]> => {
+    try {
+      const response = await apiService.get<{ success: boolean; data: any[] }>(
+        `/alimentos?search=${termo}`
+      )
+      return response.data.map(transformAlimentoFromBackend)
+    } catch (error) {
+      console.error("Error searching alimentos:", error)
+      throw error
+    }
   },
 }

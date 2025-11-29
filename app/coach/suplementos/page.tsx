@@ -10,22 +10,22 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search } from "lucide-react"
-import type { Suplemento, SuplementoFormData, TipoSuplemento } from "@/types/suplemento"
+import { CATEGORIAS_SUPLEMENTO, CategoriaSuplemento, type Suplemento, type SuplementoFormData, type TipoSuplemento } from "@/types/suplemento"
 import { suplementoService } from "@/services/suplemento-service"
 import { coachMenuItems } from "@/lib/menu-items"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 export default function SuplementosPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [suplementos, setSuplementos] = useState<Suplemento[]>([])
   const [filteredSuplementos, setFilteredSuplementos] = useState<Suplemento[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [tipoFilter, setTipoFilter] = useState<TipoSuplemento | "todos">("todos")
   const [marcaFilter, setMarcaFilter] = useState<string>("todas")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingSuplemento, setEditingSuplemento] = useState<Suplemento | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [tipoFilter, setTipoFilter] = useState<TipoSuplemento | "todos">("todos")
+  const [categoriaFilter, setCategoriaFilter] = useState<CategoriaSuplemento | "todos">("todos") 
 
   useEffect(() => {
     loadSuplementos()
@@ -37,33 +37,39 @@ export default function SuplementosPage() {
 
   const loadSuplementos = async () => {
     try {
-      const data = await suplementoService.getAll()
-      setSuplementos(data)
+      const response = await suplementoService.getAll()
+      setSuplementos(response.suplementos) 
     } catch (error) {
-      toast({
-        title: "Erro ao carregar suplementos",
-        description: "Tente novamente mais tarde",
-        variant: "destructive",
-      })
+      toast.error("Erro ao carregar suplementos")
     }
   }
 
   const filterSuplementos = () => {
-    let filtered = suplementos
+      let filtered = suplementos
 
-    if (searchTerm) {
-      filtered = filtered.filter((s) => s.nome.toLowerCase().includes(searchTerm.toLowerCase()))
-    }
+      // 1. Search filter
+      if (searchTerm) {
+        const lowerSearchTerm = searchTerm.toLowerCase()
+        filtered = filtered.filter(
+          (s) =>
+            (s.nomeSuplemento?.toLowerCase().includes(lowerSearchTerm)) || 
+            (s.nomeManipulado?.toLowerCase().includes(lowerSearchTerm)) || 
+            (s.observacoes?.toLowerCase().includes(lowerSearchTerm)) ||
+            (s.contraindicacoes?.toLowerCase().includes(lowerSearchTerm)) // Novo campo no filtro
+        )
+      }
 
-    if (tipoFilter !== "todos") {
-      filtered = filtered.filter((s) => s.tipo === tipoFilter)
-    }
-
-    if (marcaFilter !== "todas") {
-      filtered = filtered.filter((s) => s.marca === marcaFilter)
-    }
-
-    setFilteredSuplementos(filtered)
+      // 2. Type filter
+      if (tipoFilter !== "todos") {
+        filtered = filtered.filter((s) => s.tipo === tipoFilter)
+      }
+      
+      // 3. Category filter (NOVO)
+      if (categoriaFilter !== "todos") {
+        filtered = filtered.filter((s) => s.categoria === categoriaFilter)
+      }
+      
+      setFilteredSuplementos(filtered)
   }
 
   const handleSubmit = async (data: SuplementoFormData) => {
@@ -71,26 +77,16 @@ export default function SuplementosPage() {
     try {
       if (editingSuplemento) {
         await suplementoService.update(editingSuplemento.id, data)
-        toast({
-          title: "Suplemento atualizado",
-          description: "As alterações foram salvas com sucesso",
-        })
+        toast.success("Suplemento atualizado")
       } else {
         await suplementoService.create(data)
-        toast({
-          title: "Suplemento adicionado",
-          description: "O suplemento foi cadastrado com sucesso",
-        })
+        toast.success("Suplemento adicionado")
       }
       await loadSuplementos()
       setIsDialogOpen(false)
       setEditingSuplemento(null)
     } catch (error) {
-      toast({
-        title: "Erro ao salvar",
-        description: "Tente novamente mais tarde",
-        variant: "destructive",
-      })
+      toast.error("Erro ao salvar")
     } finally {
       setIsLoading(false)
     }
@@ -102,25 +98,14 @@ export default function SuplementosPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este suplemento?")) return
-
     try {
       await suplementoService.delete(id)
-      toast({
-        title: "Suplemento excluído",
-        description: "O suplemento foi removido com sucesso",
-      })
+      toast.success("Suplemento excluído")
       await loadSuplementos()
     } catch (error) {
-      toast({
-        title: "Erro ao excluir",
-        description: "Tente novamente mais tarde",
-        variant: "destructive",
-      })
+      toast.error("Erro ao excluir")
     }
   }
-
-  const marcas = ["todas", ...Array.from(new Set(suplementos.map((s) => s.marca)))]
 
   return (
     <AppLayout
@@ -160,18 +145,22 @@ export default function SuplementosPage() {
             </TabsList>
           </Tabs>
 
-          <Select value={marcaFilter} onValueChange={setMarcaFilter}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="Filtrar por marca" />
-            </SelectTrigger>
-            <SelectContent>
-              {marcas.map((marca) => (
-                <SelectItem key={marca} value={marca}>
-                  {marca === "todas" ? "Todas as marcas" : marca}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+      value={categoriaFilter}
+          onValueChange={(value) => setCategoriaFilter(value as CategoriaSuplemento | "todos")}
+        >
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Filtrar por categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas as Categorias</SelectItem>
+            {CATEGORIAS_SUPLEMENTO.map((cat) => (
+              <SelectItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         </div>
 
         <div className="text-sm text-muted-foreground">

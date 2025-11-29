@@ -1,90 +1,108 @@
-import type { Hormonio, HormonioFormData } from "@/types/hormonio"
+// src/services/hormonio-service.ts (ATUALIZADO)
 
-// Mock data para desenvolvimento
-const mockHormonios: Hormonio[] = [
-  {
-    id: "1",
-    nome: "Testosterona Cipionato",
-    categoria: "anabolico",
-    dose: "250mg",
-    frequencia: "2x por semana",
-    viaAdministracao: "injetavel",
-    tempoMeiaVida: "8 dias",
-    fabricante: "Landerlan",
-    observacoes: "Aplicar via intramuscular profunda",
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-15"),
-  },
-  {
-    id: "2",
-    nome: "HGH Fragment 176-191",
-    categoria: "peptideo",
-    dose: "250mcg",
-    frequencia: "1x ao dia",
-    viaAdministracao: "injetavel",
-    tempoMeiaVida: "2-3 horas",
-    fabricante: "Hilma Biocare",
-    observacoes: "Aplicar em jejum, subcutâneo",
-    createdAt: new Date("2024-01-16"),
-    updatedAt: new Date("2024-01-16"),
-  },
-  {
-    id: "3",
-    nome: "T3 (Liothyronine)",
-    categoria: "tireoidiano",
-    dose: "25mcg",
-    frequencia: "1x ao dia",
-    viaAdministracao: "oral",
-    tempoMeiaVida: "24 horas",
-    fabricante: "Pharma Grade",
-    observacoes: "Tomar pela manhã em jejum",
-    createdAt: new Date("2024-01-17"),
-    updatedAt: new Date("2024-01-17"),
-  },
-]
+import type { Hormonio, HormonioFormData, TipoHormonio, CategoriaHormonio, ViaAdministracao } from "@/types/hormonio"
+import { apiService } from "./api-service" 
 
-let hormonios = [...mockHormonios]
+interface HormonioListResponse {
+  message: string
+  data: Hormonio[]
+}
+
+// 📄 Função de Transformação (Backend -> Frontend)
+function transformHormonioFromBackend(back: any): Hormonio {
+    return {
+        id: back.id,
+        nome: back.nomeHormonio,
+        tipo: back.tipo as TipoHormonio,
+        categoria: back.categoria as CategoriaHormonio,
+        viaAdministracao: back.viaAdministracao as ViaAdministracao,
+        
+        // Novos campos de texto longo
+        observacoes: back.observacoes || undefined,
+        contraindicacoes: back.contraindicacoes || undefined,
+        efeitosColaterais: back.efeitosColaterais || undefined,
+
+        // Campos removidos: dose, frequencia, tempoMeiaVida, fabricante
+        
+        createdAt: new Date(back.createdAt),
+        updatedAt: new Date(back.updatedAt),
+    }
+}
+
+// 📄 Função de Transformação (Frontend -> Backend)
+function transformHormonioToBackend(front: HormonioFormData): any {
+    return {
+        nomeHormonio: front.nome,
+        tipo: front.tipo, 
+        categoria: front.categoria,
+        viaAdministracao: front.viaAdministracao,
+        
+        // Novos campos de texto longo
+        observacoes: front.observacoes || null,
+        contraindicacoes: front.contraindicacoes || null,
+        efeitosColaterais: front.efeitosColaterais || null,
+
+        // Campos removidos: dosagem, frequencia, tempoMeiaVida, fabricante
+    }
+}
 
 export const hormonioService = {
+  // GET: Listar todos os hormônios
   getAll: async (): Promise<Hormonio[]> => {
-    // Simula delay de API
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return hormonios
+    try {
+      const response = await apiService.get<any>(`/api/hormonios`) 
+      return response.data.hormonios.map(transformHormonioFromBackend) 
+    } catch (error) {
+      console.error("Erro ao buscar hormônios:", error)
+      throw error
+    }
   },
 
+  // GET: Buscar por ID
   getById: async (id: string): Promise<Hormonio | null> => {
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    return hormonios.find((h) => h.id === id) || null
+    try {
+      const response = await apiService.get<{ success: boolean; data: any }>(`/api/hormonios/${id}`)
+      // CORREÇÃO: Acessa diretamente response.data
+      return transformHormonioFromBackend(response.data)
+    } catch (error) {
+      console.error("Erro ao buscar hormônio por ID:", error)
+      throw error
+    }
   },
 
+  // POST: Criar novo hormônio
   create: async (data: HormonioFormData): Promise<Hormonio> => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    const newHormonio: Hormonio = {
-      id: Date.now().toString(),
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    try {
+      const backendData = transformHormonioToBackend(data)
+      const response = await apiService.post<{ success: boolean; data: any }>(`/api/hormonios`, backendData)
+      // CORREÇÃO: Acessa diretamente response.data
+      return transformHormonioFromBackend(response.data)
+    } catch (error) {
+      console.error("Erro ao criar hormônio:", error)
+      throw error
     }
-    hormonios = [newHormonio, ...hormonios]
-    return newHormonio
   },
 
+  // PUT: Atualizar hormônio
   update: async (id: string, data: HormonioFormData): Promise<Hormonio> => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    const index = hormonios.findIndex((h) => h.id === id)
-    if (index === -1) throw new Error("Hormônio não encontrado")
-
-    const updatedHormonio: Hormonio = {
-      ...hormonios[index],
-      ...data,
-      updatedAt: new Date(),
+    try {
+      const backendData = transformHormonioToBackend(data)
+      const response = await apiService.put<{ success: boolean; data: any }>(`/api/hormonios/${id}`, backendData)
+      // CORREÇÃO: Acessa diretamente response.data
+      return transformHormonioFromBackend(response.data)
+    } catch (error) {
+      console.error("Erro ao atualizar hormônio:", error)
+      throw error
     }
-    hormonios[index] = updatedHormonio
-    return updatedHormonio
   },
 
+  // DELETE: Excluir hormônio
   delete: async (id: string): Promise<void> => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    hormonios = hormonios.filter((h) => h.id !== id)
+    try {
+      await apiService.delete(`/api/hormonios/${id}`)
+    } catch (error) {
+      console.error("Erro ao excluir hormônio:", error)
+      throw error
+    }
   },
 }

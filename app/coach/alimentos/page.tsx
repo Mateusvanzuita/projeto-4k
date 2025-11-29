@@ -12,11 +12,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { coachMenuItems } from "@/lib/menu-items"
 import { alimentoService } from "@/services/alimento-service"
 import type { Alimento, AlimentoFormData } from "@/types/alimento"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 export default function AlimentosPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [alimentos, setAlimentos] = useState<Alimento[]>([])
   const [filteredAlimentos, setFilteredAlimentos] = useState<Alimento[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -37,23 +36,23 @@ export default function AlimentosPage() {
 
   const loadAlimentos = async () => {
     try {
-      const data = await alimentoService.getAll()
-      setAlimentos(data)
+      const { alimentos } = await alimentoService.getAll()
+      console.log('Alimentos carregados:', alimentos) // Debug
+      setAlimentos(alimentos)
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os alimentos.",
-        variant: "destructive",
-      })
+      console.error('Erro ao carregar alimentos:', error)
+      toast.error("Não foi possível carregar os alimentos.")
     }
   }
 
   const filterAlimentos = () => {
     let filtered = [...alimentos]
 
-    // Filter by tipo
+    // Filter by tipo - CORRIGIDO para comparar corretamente
     if (selectedTipo !== "todos") {
-      filtered = filtered.filter((a) => a.tipo === selectedTipo)
+      filtered = filtered.filter(
+        (a) => a.categoria.toUpperCase() === selectedTipo.toUpperCase()
+      )
     }
 
     // Filter by search query
@@ -62,11 +61,12 @@ export default function AlimentosPage() {
       filtered = filtered.filter(
         (a) =>
           a.nome.toLowerCase().includes(query) ||
-          a.tipo.toLowerCase().includes(query) ||
+          a.categoria.toLowerCase().includes(query) ||
           a.observacoes?.toLowerCase().includes(query),
       )
     }
 
+    console.log('Filtered alimentos:', filtered) // Debug
     setFilteredAlimentos(filtered)
   }
 
@@ -81,21 +81,12 @@ export default function AlimentosPage() {
   }
 
   const handleDeleteAlimento = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este alimento?")) return
-
     try {
       await alimentoService.delete(id)
       await loadAlimentos()
-      toast({
-        title: "Sucesso",
-        description: "Alimento excluído com sucesso.",
-      })
+      toast.success("Alimento excluído com sucesso.")
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir o alimento.",
-        variant: "destructive",
-      })
+      toast.error("Não foi possível excluir o alimento.")
     }
   }
 
@@ -104,26 +95,16 @@ export default function AlimentosPage() {
     try {
       if (editingAlimento) {
         await alimentoService.update(editingAlimento.id, data)
-        toast({
-          title: "Sucesso",
-          description: "Alimento atualizado com sucesso.",
-        })
+        toast.success("Alimento atualizado com sucesso.")
       } else {
         await alimentoService.create(data)
-        toast({
-          title: "Sucesso",
-          description: "Alimento adicionado com sucesso.",
-        })
+        toast.success("Alimento adicionado com sucesso.")
       }
       await loadAlimentos()
       setIsDialogOpen(false)
       setEditingAlimento(null)
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar o alimento.",
-        variant: "destructive",
-      })
+      toast.error("Não foi possível salvar o alimento.")
     } finally {
       setIsLoading(false)
     }
