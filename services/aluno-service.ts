@@ -60,7 +60,7 @@ export const alunoService = {
       if (params?.sexo) queryParams.append("sexo", params.sexo.toUpperCase())
       if (params?.duracaoPlano) queryParams.append("duracaoPlano", params.duracaoPlano.toUpperCase())
 
-      const endpoint = `/students${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+      const endpoint = `/api/students${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
       const response = await apiService.get<AlunoListResponse>(endpoint)
 
       return (response.data || []).map(transformAlunoFromBackend)
