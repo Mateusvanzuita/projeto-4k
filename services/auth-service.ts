@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
 }
 
 class AuthService {
-  private apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+  private apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"
 
   /**
    * Login user with email and password

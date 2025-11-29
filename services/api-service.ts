@@ -1,7 +1,7 @@
 import { authService } from "./auth-service"
 
 class ApiService {
-  private baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+  private baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api"
 
   /**
    * Generic fetch wrapper with authentication
