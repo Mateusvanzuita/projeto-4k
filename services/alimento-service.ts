@@ -114,7 +114,7 @@ export const alimentoService = {
   search: async (termo: string): Promise<Alimento[]> => {
     try {
       const response = await apiService.get<{ success: boolean; data: any[] }>(
-        `/alimentos?search=${termo}`
+        `/api/alimentos?search=${termo}`
       )
       return response.data.map(transformAlimentoFromBackend)
     } catch (error) {

@@ -1,231 +1,169 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { ChevronLeft, ChevronRight, Check, ArrowLeft, Loader2 } from "lucide-react"
 import { AppLayout } from "@/components/app-layout"
 import { coachMenuItems } from "@/lib/menu-items"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlunoSelector } from "@/components/aluno-selector"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { PlanoAlimentarTab } from "@/components/protocolo/plano-alimentar-tab"
-import { TreinoTab } from "@/components/protocolo/treino-tab"
-import { SuplementacaoTab } from "@/components/protocolo/suplementacao-tab"
-import { ManipuladosTab } from "@/components/protocolo/manipulados-tab"
-import { HormoniosTab } from "@/components/protocolo/hormonio-tab"
-import { ResumoTab } from "@/components/protocolo/resumo-tab"
-import { protocoloService } from "@/services/protocolo-service"
-import { alunoService } from "@/services/aluno-service"
-import type {
-  ProtocoloFormData,
-  Refeicao,
-  TreinoDivisao,
-  SuplementoProtocolo,
-  ManipuladoProtocolo,
-  HormonioProtocolo,
-} from "@/types/protocolo"
+import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
+
+// Importação dos Componentes de Etapa
+import { StepIdentidade } from "@/components/protocolo/step-identidade"
+import { StepAluno } from "@/components/protocolo/step-aluno"
+import { StepNutricaoBase } from "@/components/protocolo/step-nutricao-base"
+import { StepRefeicoes } from "@/components/protocolo/step-refeicoes"
+import { StepSuplementos } from "@/components/protocolo/step-suplementos"
+import { StepHormonios } from "@/components/protocolo/step-hormonios"
+import { StepTreino } from "@/components/protocolo/step-treino"
+import { StepRevisao } from "@/components/protocolo/step-revisao"
+
+// Importação do Serviço
+import { protocoloService } from "@/services/protocolo-service"
+
+const TOTAL_STEPS = 8
 
 export default function NovoProtocoloPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [alunoId, setAlunoId] = useState<string>("")
-  const [alunoNome, setAlunoNome] = useState<string>("")
-  const [activeTab, setActiveTab] = useState("aluno")
-  const [saving, setSaving] = useState(false)
-
-  const [refeicoes, setRefeicoes] = useState<Refeicao[]>([])
-  const [treinos, setTreinos] = useState<TreinoDivisao[]>([])
-  const [suplementos, setSuplementos] = useState<SuplementoProtocolo[]>([])
-  const [manipulados, setManipulados] = useState<ManipuladoProtocolo[]>([])
-  const [hormonios, setHormonios] = useState<HormonioProtocolo[]>([])
-
-  useEffect(() => {
-    if (alunoId) {
-      loadAlunoNome()
+  const [currentStep, setCurrentStep] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  const [formData, setFormData] = useState({
+    identidade: { nome: "", objetivo: "Cutting", inicio: new Date().toISOString(), validade: "", descricao: "" },
+    aluno: { id: "", nome: "", peso: 0, altura: 0, nivelAtividade: "Moderado" },
+    nutricao: { estrategia: "Estruturada", macros: { p: 0, c: 0, g: 0 }, totalCalorico: 0, consumoAgua: "", regrasGerais: "", refeicoes: [] },
+    suplementos: [],
+    manipulados: [],
+    hormonios: [],
+    treino: { 
+      cardio: { tipo: "", frequencia: "", tempo: "", observacoes: "" },
+      mobilidade: { quantidade: "", tipos: "" },
+      estrutura: "",
+      divisoes: [] 
     }
-  }, [alunoId])
+  })
 
-  const loadAlunoNome = async () => {
-    try {
-      const aluno = await alunoService.getById(alunoId)
-      if (aluno) {
-        setAlunoNome(aluno.nomeCompleto)
-      }
-    } catch (error) {
-      console.error("Erro ao carregar aluno:", error)
-    }
+  const next = () => setCurrentStep((s) => Math.min(s + 1, TOTAL_STEPS))
+  const prev = () => setCurrentStep((s) => Math.max(s - 1, 1))
+
+// Substitua apenas a função handleFinalize dentro do seu page.tsx
+const handleFinalize = async () => {
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+
+  try {
+    const payload = {
+      alunoId: formData.aluno.id,
+      nome: formData.identidade.nome,
+      descricao: formData.identidade.descricao,
+      objetivo: formData.identidade.objetivo,
+      dataValidade: formData.identidade.validade ? new Date(formData.identidade.validade) : undefined,
+      status: "ATIVO",
+      
+      // Nutrição: Ajustado de 'nome' para 'nomeRefeicao' e 'itens' para 'alimentos'
+      refeicoes: formData.nutricao.refeicoes.map((ref: any) => ({
+        nomeRefeicao: ref.nome, // O backend exige este nome
+        horarioPrevisto: ref.horario,
+        alimentos: ref.itens.map((it: any) => ({
+          alimentoId: it.alimentoId,
+          quantidade: Number(it.quantidade),
+          unidadeMedida: it.unidade
+        }))
+      })),
+
+      macros: formData.nutricao.macros,
+      totalCalorico: formData.nutricao.totalCalorico,
+      consumoAgua: formData.nutricao.consumoAgua,
+      regrasGeraisNutricao: formData.nutricao.regrasGerais,
+
+      suplementos: [...formData.suplementos, ...formData.manipulados],
+      hormonios: formData.hormonios,
+
+      // Treino: Mapeado para a estrutura planosTreino
+      planosTreino: formData.treino.divisoes.map((div: any) => ({
+        nomeDivisao: `Treino ${div.letra}`,
+        orientacoes: formData.treino.estrutura,
+        exercicios: div.exercicios.map((ex: any) => ({
+          exercicioId: ex.exercicioId,
+          series: Number(ex.series),
+          repeticoes: ex.reps,
+          intervaloDescanso: ex.descanso,
+          observacoes: ex.obs
+        }))
+      }))
+    };
+
+    await protocoloService.create(payload as any);
+    toast({ title: "Sucesso!", description: "Protocolo criado e enviado ao aluno." });
+    router.push("/coach/protocolos");
+  } catch (error) {
+    console.error("Erro no envio:", error);
+    toast({ variant: "destructive", title: "Dados Inválidos", description: "Verifique se todos os campos obrigatórios foram preenchidos." });
+  } finally {
+    setIsSubmitting(false);
   }
+};
 
-  const handleSave = async (status: "rascunho" | "ativo") => {
-    if (!alunoId) {
-      toast({
-        title: "Atenção",
-        description: "Selecione um aluno antes de salvar.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setSaving(true)
-    try {
-      const data: ProtocoloFormData = {
-        alunoId,
-        status,
-        planoAlimentar: {
-          refeicoes,
-          orientacoes: "",
-        },
-        planoTreino: {
-          divisoes: treinos,
-          orientacoes: "",
-        },
-        suplementacao: suplementos,
-        manipulados: manipulados,
-        hormonios: hormonios,
-      }
-
-      const protocolo = await protocoloService.create(data)
-      toast({
-        title: "Sucesso",
-        description: `Protocolo ${status === "rascunho" ? "salvo como rascunho" : "criado e vinculado ao aluno"} com sucesso.`,
-      })
-      router.push(`/coach/protocolos/${protocolo.id}`)
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar o protocolo.",
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleExportPDF = () => {
-    toast({
-      title: "Exportando PDF",
-      description: "Funcionalidade em desenvolvimento...",
-    })
-  }
+  const progress = (currentStep / TOTAL_STEPS) * 100
 
   return (
-    <AppLayout
-      menuItems={coachMenuItems}
-      onCreateProtocol={() => router.push("/coach/protocolos/novo")}
-      onNavigateAlunos={() => router.push("/coach/alunos")}
-      onNavigateRelatorios={() => router.push("/coach/relatorios")}
-    >
-      <div className="p-3 md:p-4 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => router.back()}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold">Novo Protocolo</h1>
-              <p className="text-xs md:text-sm text-muted-foreground">Crie um protocolo personalizado</p>
-            </div>
-          </div>
-          <div className="flex gap-2 w-full md:w-auto">
-            <Button
-              variant="outline"
-              onClick={() => handleSave("rascunho")}
-              disabled={saving}
-              className="flex-1 md:flex-none text-sm"
-            >
-              <span className="hidden sm:inline">Salvar </span>Rascunho
-            </Button>
-            <Button onClick={() => handleSave("ativo")} disabled={saving} className="flex-1 md:flex-none text-sm">
-              <span className="hidden sm:inline">Salvar e </span>Ativar
-            </Button>
+    <AppLayout menuItems={coachMenuItems}>
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 md:py-8 space-y-6">
+        
+        <div className="flex items-center justify-between px-2">
+          <Button variant="ghost" size="sm" onClick={() => router.back()} disabled={isSubmitting}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+          </Button>
+          <div className="text-right">
+            <span className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">
+              Passo {currentStep} de {TOTAL_STEPS}
+            </span>
+            <Progress value={progress} className="w-32 h-1.5" />
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
-            <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-7">
-              <TabsTrigger value="aluno" className="text-xs md:text-sm whitespace-nowrap">
-                Aluno
-              </TabsTrigger>
-              <TabsTrigger value="dieta" disabled={!alunoId} className="text-xs md:text-sm whitespace-nowrap">
-                Dieta
-              </TabsTrigger>
-              <TabsTrigger value="treino" disabled={!alunoId} className="text-xs md:text-sm whitespace-nowrap">
-                Treino
-              </TabsTrigger>
-              <TabsTrigger value="suplementos" disabled={!alunoId} className="text-xs md:text-sm whitespace-nowrap">
-                Suplementos
-              </TabsTrigger>
-              <TabsTrigger value="manipulados" disabled={!alunoId} className="text-xs md:text-sm whitespace-nowrap">
-                Manipulados
-              </TabsTrigger>
-              <TabsTrigger value="hormonios" disabled={!alunoId} className="text-xs md:text-sm whitespace-nowrap">
-                Hormônios
-              </TabsTrigger>
-              <TabsTrigger value="resumo" disabled={!alunoId} className="text-xs md:text-sm whitespace-nowrap">
-                Resumo
-              </TabsTrigger>
-            </TabsList>
-          </div>
+        <div className="min-h-[500px] bg-white rounded-xl border shadow-sm p-5 md:p-8">
+          {currentStep === 1 && <StepIdentidade data={formData.identidade} update={(d) => setFormData({...formData, identidade: d})} />}
+          {currentStep === 2 && <StepAluno data={formData.aluno} update={(d) => setFormData({...formData, aluno: d})} />}
+          {currentStep === 3 && <StepNutricaoBase data={formData.nutricao} update={(d) => setFormData({...formData, nutricao: d})} />}
+          {currentStep === 4 && <StepRefeicoes data={formData.nutricao} update={(d) => setFormData({...formData, nutricao: d})} />}
+          {currentStep === 5 && <StepSuplementos data={formData} update={(d) => setFormData({...formData, ...d})} />}
+          {currentStep === 6 && <StepHormonios data={formData.hormonios} update={(d) => setFormData({...formData, hormonios: d})} />}
+          {currentStep === 7 && <StepTreino data={formData.treino} update={(d) => setFormData({...formData, treino: d})} />}
+          {currentStep === 8 && <StepRevisao data={formData} onEdit={(s) => setCurrentStep(s)} />}
+        </div>
 
-          <TabsContent value="aluno" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Selecione o Aluno</CardTitle>
-                <CardDescription>Escolha o aluno para quem você está criando este protocolo</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AlunoSelector
-                  value={alunoId}
-                  onValueChange={setAlunoId}
-                  onNovoAluno={() => router.push("/coach/alunos?novo=true")}
-                />
-                {alunoId && (
-                  <div className="mt-4">
-                    <Button onClick={() => setActiveTab("dieta")} className="w-full">
-                      Continuar para Plano Alimentar
-                    </Button>
-                  </div>
+        <div className="flex justify-between items-center bg-white p-4 border rounded-xl shadow-sm">
+          <Button variant="ghost" onClick={prev} disabled={currentStep === 1 || isSubmitting}>
+            <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
+          </Button>
+          
+          <div className="flex gap-2">
+            {currentStep < TOTAL_STEPS ? (
+              <Button onClick={next} className="px-8 bg-[#004767] hover:bg-[#00354d]">
+                Próxima Etapa <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleFinalize} 
+                disabled={isSubmitting}
+                className="bg-green-600 hover:bg-green-700 px-8 text-white min-w-[180px]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" /> Finalizar e Ativar
+                  </>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="dieta">
-            <PlanoAlimentarTab value={refeicoes} onChange={setRefeicoes} />
-          </TabsContent>
-
-          <TabsContent value="treino">
-            <TreinoTab value={treinos} onChange={setTreinos} />
-          </TabsContent>
-
-          <TabsContent value="suplementos">
-            <SuplementacaoTab value={suplementos} onChange={setSuplementos} />
-          </TabsContent>
-
-          <TabsContent value="manipulados">
-            <ManipuladosTab value={manipulados} onChange={setManipulados} />
-          </TabsContent>
-
-          <TabsContent value="hormonios">
-            <HormoniosTab value={hormonios} onChange={setHormonios} />
-          </TabsContent>
-
-          <TabsContent value="resumo">
-            <ResumoTab
-              alunoNome={alunoNome}
-              refeicoes={refeicoes}
-              treinos={treinos}
-              suplementos={suplementos}
-              manipulados={manipulados}
-              hormonios={hormonios}
-              onExportPDF={handleExportPDF}
-              onFinalizar={() => handleSave("ativo")}
-            />
-          </TabsContent>
-        </Tabs>
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </AppLayout>
   )

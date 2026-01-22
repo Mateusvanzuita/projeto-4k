@@ -27,7 +27,7 @@ export type Dificuldade = "leve" | "medio" | "pesado"
 
 export interface Exercicio {
   id: string
-  nome: string
+  nomeExercicio: string
   grupoMuscular: GrupoMuscular
   equipamento: Equipamento
   dificuldade: Dificuldade

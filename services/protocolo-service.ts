@@ -1,73 +1,122 @@
-import type { Protocolo, ProtocoloFormData } from "@/types/protocolo"
+// src/services/protocolo-service.ts (API REAL)
 
-// Mock data
-let protocolos: Protocolo[] = []
+import type { Protocolo, ProtocoloFormData, StatusProtocolo } from "@/types/protocolo"
+import { apiService } from "./api-service"
+import type { ApiResponse } from "@/types/api"
+
+// --- Funções de Transformação (Backend -> Frontend) ---
+function transformProtocoloFromBackend(back: any): Protocolo {
+    return {
+        id: back.id,
+        alunoId: back.alunoId,
+        nome: back.nome,
+        descricao: back.descricao,
+        status: back.status as StatusProtocolo,
+        dataCriacao: new Date(back.dataCriacao),
+        dataAtivacao: back.dataAtivacao ? new Date(back.dataAtivacao) : undefined,
+        dataValidade: back.dataValidade ? new Date(back.dataValidade) : undefined,
+        
+        // 🚨 CORREÇÃO: Adicionado check '|| []' para evitar erro de .map() em undefined
+        refeicoes: (back.refeicoes || []).map((r: any) => ({
+            ...r,
+            alimentos: (r.alimentos || []).map((a: any) => ({
+                ...a,
+                quantidade: parseFloat(a.quantidade) || 0,
+                alimento: a.alimento,
+            }))
+        })),
+        
+        planosTreino: (back.planosTreino || []).map((p: any) => ({
+            ...p,
+            exercicios: (p.exercicios || []).map((e: any) => ({
+                ...e,
+                exercicio: e.exercicio
+            }))
+        })),
+
+        suplementosProtocolo: back.suplementosProtocolo || [],
+        hormoniosProtocolo: back.hormoniosProtocolo || [],
+        aluno: back.aluno
+    }
+}
+
 
 export const protocoloService = {
-  getAll: async (): Promise<Protocolo[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return protocolos
+  // GET /api/protocolos
+getAll: async (params?: { search?: string, status?: StatusProtocolo }): Promise<Protocolo[]> => {
+    try {
+      const response = await apiService.get<ApiResponse<any>>(`/api/protocolos`)
+      
+      // ✅ Captura o array de dentro de response.data ou assume vazio
+      const rawData = response.data || []
+      
+      // Se vier dentro de uma propriedade 'protocolos' (dependendo do seu backend)
+      const dataArray = Array.isArray(rawData) ? rawData : (rawData.protocolos || [])
+      
+      return dataArray.map(transformProtocoloFromBackend)
+    } catch (error) {
+      console.error("❌ Erro no getAll Protocolos:", error)
+      return []
+    }
   },
 
+  // GET /api/protocolos/:id
   getById: async (id: string): Promise<Protocolo | null> => {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return protocolos.find((p) => p.id === id) || null
+    try {
+      const response = await apiService.get<ApiResponse<any>>(`/api/protocolos/${id}`)
+      return response.data ? transformProtocoloFromBackend(response.data) : null
+    } catch (error) {
+      console.error("Error fetching protocolo by ID:", error)
+      return null
+    }
   },
 
-  getByAlunoId: async (alunoId: string): Promise<Protocolo[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return protocolos.filter((p) => p.alunoId === alunoId)
-  },
-
+  // POST /api/protocolos
   create: async (data: ProtocoloFormData): Promise<Protocolo> => {
-    await new Promise((resolve) => setTimeout(resolve, 800))
-    const newProtocolo: Protocolo = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    try {
+      const response = await apiService.post<ApiResponse<any>>(`/api/protocolos`, data)
+      return transformProtocoloFromBackend(response.data)
+    } catch (error) {
+      console.error("Error creating protocolo:", error)
+      throw error
     }
-    protocolos.push(newProtocolo)
-    return newProtocolo
   },
 
+  // PUT /api/protocolos/:id
   update: async (id: string, data: Partial<ProtocoloFormData>): Promise<Protocolo> => {
-    await new Promise((resolve) => setTimeout(resolve, 800))
-    const index = protocolos.findIndex((p) => p.id === id)
-    if (index === -1) throw new Error("Protocolo não encontrado")
-
-    protocolos[index] = {
-      ...protocolos[index],
-      ...data,
-      updatedAt: new Date(),
+    try {
+      const response = await apiService.put<ApiResponse<any>>(`/api/protocolos/${id}`, data)
+      return transformProtocoloFromBackend(response.data)
+    } catch (error) {
+      console.error("Error updating protocolo:", error)
+      throw error
     }
-    return protocolos[index]
   },
 
+  // DELETE /api/protocolos/:id
   delete: async (id: string): Promise<void> => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    protocolos = protocolos.filter((p) => p.id !== id)
+    try {
+      await apiService.delete(`/api/protocolos/${id}`)
+    } catch (error) {
+      console.error("Error deleting protocolo:", error)
+      throw error
+    }
   },
 
+  // POST /api/protocolos/:id/clone
   clone: async (id: string): Promise<Protocolo> => {
-    await new Promise((resolve) => setTimeout(resolve, 800))
-    const original = protocolos.find((p) => p.id === id)
-    if (!original) throw new Error("Protocolo não encontrado")
-
-    const cloned: Protocolo = {
-      ...original,
-      id: Math.random().toString(36).substr(2, 9),
-      status: "rascunho",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    try {
+      const response = await apiService.post<ApiResponse<any>>(`/api/protocolos/${id}/clone`)
+      return transformProtocoloFromBackend(response.data)
+    } catch (error) {
+      console.error("Error cloning protocolo:", error)
+      throw error
     }
-    protocolos.push(cloned)
-    return cloned
   },
 
   exportPDF: async (id: string): Promise<Blob> => {
+    // Implementação de mock ou chamada real para PDF
     await new Promise((resolve) => setTimeout(resolve, 1000))
-    // Mock PDF generation
     return new Blob(["Mock PDF content"], { type: "application/pdf" })
   },
 }

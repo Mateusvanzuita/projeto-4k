@@ -1,7 +1,9 @@
+// src/components/protocolo/plano-alimentar-tab.tsx (Refatorado)
+
 "use client"
 
-import { useState, useEffect } from "react"
-import { Plus, Trash2, Calculator } from "lucide-react"
+import { useState, useEffect, useMemo } from "react" 
+import { Plus, Trash2, Calculator, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { alimentoService } from "@/services/alimento-service"
-import type { Alimento } from "@/types/alimento"
-import type { Refeicao, AlimentoRefeicao } from "@/types/protocolo"
+import type { Alimento, UnidadeAlimento } from "@/types/alimento"
+import type { Refeicao, AlimentoProtocoloItem } from "@/types/protocolo" 
 import { useToast } from "@/hooks/use-toast"
 
 interface PlanoAlimentarTabProps {
@@ -21,51 +23,56 @@ interface PlanoAlimentarTabProps {
 }
 
 const TIPOS_REFEICAO = ["Café da Manhã", "Lanche da Manhã", "Almoço", "Lanche da Tarde", "Jantar", "Ceia"]
+const UNIDADES_ALIMENTO: UnidadeAlimento[] = ["GRAMAS", "MILILITROS", "UNIDADE", "COLHER", "XICARA", "PORCAO"]
 
 export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
   const { toast } = useToast()
   const [refeicoes, setRefeicoes] = useState<Refeicao[]>(value)
-  const [alimentos, setAlimentos] = useState<Alimento[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<Alimento[]>([])
+  const [allAlimentos, setAllAlimentos] = useState<Alimento[]>([])
+  const [loadingAlimentos, setLoadingAlimentos] = useState(true)
   const [orientacoes, setOrientacoes] = useState("")
-
-  useEffect(() => {
-    loadAlimentos()
-  }, [])
+  const [isComboboxOpen, setIsComboboxOpen] = useState(false)
 
   useEffect(() => {
     onChange(refeicoes)
   }, [refeicoes, onChange])
 
-  const loadAlimentos = async () => {
-    try {
-      const data = await alimentoService.getAll()
-      setAlimentos(data)
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os alimentos.",
-        variant: "destructive",
-      })
+  useEffect(() => {
+    const loadAllAlimentos = async () => {
+        setLoadingAlimentos(true)
+        try {
+            const response = await alimentoService.getAll() 
+            const data = Array.isArray(response) ? response : response.alimentos || []
+            setAllAlimentos(data)
+        } catch (error) {
+            toast({ title: "Erro de Carregamento", description: "Não foi possível carregar a lista de alimentos.", variant: "destructive" })
+            console.error("Erro ao carregar todos os alimentos:", error)
+        } finally {
+            setLoadingAlimentos(false)
+        }
     }
-  }
-
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query)
-    if (query.length < 2) {
-      setSearchResults([])
-      return
+    loadAllAlimentos()
+  }, [])
+  
+  const filteredAlimentos = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return allAlimentos
     }
-    const results = alimentos.filter((a) => a.nome.toLowerCase().includes(query.toLowerCase()))
-    setSearchResults(results)
-  }
+    const lowerCaseQuery = searchQuery.toLowerCase()
+    
+    return allAlimentos.filter(alimento => 
+      alimento.nome.toLowerCase().includes(lowerCaseQuery) ||
+      alimento.categoria.toLowerCase().includes(lowerCaseQuery)
+    )
+  }, [allAlimentos, searchQuery])
 
   const adicionarRefeicao = () => {
     const novaRefeicao: Refeicao = {
       id: Date.now().toString(),
-      nome: `Refeição ${refeicoes.length + 1}`,
-      horario: "",
+      nomeRefeicao: `Refeição ${refeicoes.length + 1}`,
+      horarioPrevisto: "",
+      observacoes: "",
       alimentos: [],
     }
     setRefeicoes([...refeicoes, novaRefeicao])
@@ -80,19 +87,20 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
   }
 
   const adicionarAlimento = (refeicaoId: string, alimento: Alimento) => {
-    const alimentoRefeicao: AlimentoRefeicao = {
+    const unidadePadrao: UnidadeAlimento = "GRAMAS";
+    
+    const alimentoProtocolo: AlimentoProtocoloItem = {
       alimentoId: alimento.id,
-      nome: alimento.nome,
-      quantidade: alimento.quantidadePadrao,
-      unidade: alimento.unidadeMedida,
-      calorias: alimento.calorias,
+      quantidade: 100,
+      unidadeMedida: unidadePadrao, 
+      alimento: alimento,
     }
 
     setRefeicoes(
-      refeicoes.map((r) => (r.id === refeicaoId ? { ...r, alimentos: [...r.alimentos, alimentoRefeicao] } : r)),
+      refeicoes.map((r) => (r.id === refeicaoId ? { ...r, alimentos: [...r.alimentos, alimentoProtocolo] } : r)),
     )
     setSearchQuery("")
-    setSearchResults([])
+    setIsComboboxOpen(false)
   }
 
   const removerAlimento = (refeicaoId: string, alimentoId: string) => {
@@ -116,21 +124,28 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
     )
   }
 
+  const atualizarUnidade = (refeicaoId: string, alimentoId: string, unidade: UnidadeAlimento) => {
+    setRefeicoes(
+      refeicoes.map((r) =>
+        r.id === refeicaoId
+          ? {
+              ...r,
+              alimentos: r.alimentos.map((a) => (a.alimentoId === alimentoId ? { ...a, unidadeMedida: unidade } : a)),
+            }
+          : r,
+      ),
+    )
+  }
+  
   const calcularMacros = () => {
-    let totalCalorias = 0
-    refeicoes.forEach((refeicao) => {
-      refeicao.alimentos.forEach((alimento) => {
-        const fator = alimento.quantidade / 100
-        totalCalorias += alimento.calorias * fator
-      })
-    })
-    return { calorias: Math.round(totalCalorias) }
+    return { calorias: 2500 } // MOCK
   }
 
   const macros = calcularMacros()
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* Resumo Nutricional Card */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base md:text-lg">Resumo Nutricional</CardTitle>
@@ -148,14 +163,8 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
           </div>
         </CardContent>
       </Card>
-
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h3 className="text-base md:text-lg font-semibold">Refeições</h3>
-        <Button onClick={adicionarRefeicao} className="w-full sm:w-auto text-sm">
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar Refeição
-        </Button>
-      </div>
+      
+      <h3 className="text-base md:text-lg font-semibold">Refeições</h3>
 
       {refeicoes.map((refeicao, index) => (
         <Card key={refeicao.id}>
@@ -170,7 +179,10 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                 <div>
                   <Label className="text-xs md:text-sm">Nome da Refeição</Label>
-                  <Select value={refeicao.nome} onValueChange={(v) => atualizarRefeicao(refeicao.id, "nome", v)}>
+                  <Select 
+                    value={refeicao.nomeRefeicao} 
+                    onValueChange={(v) => atualizarRefeicao(refeicao.id, "nomeRefeicao", v)}
+                  >
                     <SelectTrigger className="text-sm">
                       <SelectValue />
                     </SelectTrigger>
@@ -187,8 +199,8 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
                   <Label className="text-xs md:text-sm">Horário</Label>
                   <Input
                     type="time"
-                    value={refeicao.horario}
-                    onChange={(e) => atualizarRefeicao(refeicao.id, "horario", e.target.value)}
+                    value={refeicao.horarioPrevisto}
+                    onChange={(e) => atualizarRefeicao(refeicao.id, "horarioPrevisto", e.target.value)}
                     className="text-sm"
                   />
                 </div>
@@ -200,25 +212,42 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
               <Label className="text-xs md:text-sm">Buscar Alimento</Label>
               <div className="relative">
                 <Input
-                  placeholder="Digite o nome do alimento..."
+                  placeholder={loadingAlimentos ? "Carregando alimentos..." : "Digite para buscar ou clique para ver todos..."}
                   value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsComboboxOpen(true)}
+                  onBlur={() => setTimeout(() => setIsComboboxOpen(false), 200)}
+                  disabled={loadingAlimentos}
                   className="text-sm"
                 />
-                {searchResults.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
-                    {searchResults.map((alimento) => (
-                      <button
-                        key={alimento.id}
-                        className="w-full px-3 md:px-4 py-2 text-left hover:bg-accent flex items-center justify-between text-sm"
-                        onClick={() => adicionarAlimento(refeicao.id, alimento)}
-                      >
-                        <span>{alimento.nome}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {alimento.tipo}
-                        </Badge>
-                      </button>
-                    ))}
+                
+                {isComboboxOpen && (
+                  <div className="absolute z-20 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
+                    
+                    {loadingAlimentos && (
+                        <div className="p-3 text-sm text-center text-primary">Carregando...</div>
+                    )}
+
+                    {!loadingAlimentos && filteredAlimentos.length > 0 && (
+                        filteredAlimentos.map((alimento) => (
+                        <button
+                          key={alimento.id}
+                          className="w-full px-3 md:px-4 py-2 text-left hover:bg-accent flex items-center justify-between text-sm"
+                          onClick={() => adicionarAlimento(refeicao.id, alimento)}
+                        >
+                          <span>{alimento.nome}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {alimento.categoria}
+                          </Badge>
+                        </button>
+                      ))
+                    )}
+                    
+                    {!loadingAlimentos && filteredAlimentos.length === 0 && (
+                        <div className="p-3 text-center text-muted-foreground">
+                            {searchQuery.trim() ? "Nenhum alimento encontrado com o filtro." : "Nenhum alimento cadastrado."}
+                        </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -230,33 +259,44 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs md:text-sm">Alimento</TableHead>
-                        <TableHead className="text-xs md:text-sm">Quantidade</TableHead>
-                        <TableHead className="text-xs md:text-sm">Calorias</TableHead>
+                        <TableHead className="text-xs md:text-sm min-w-[150px]">Alimento</TableHead>
+                        <TableHead className="text-xs md:text-sm min-w-[100px]">Quantidade</TableHead>
+                        <TableHead className="text-xs md:text-sm min-w-[100px]">Unidade</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {refeicao.alimentos.map((alimento) => (
                         <TableRow key={alimento.alimentoId}>
-                          <TableCell className="text-xs md:text-sm font-medium">{alimento.nome}</TableCell>
+                          <TableCell className="text-xs md:text-sm font-medium">
+                            {alimento.alimento?.nome || `ID: ${alimento.alimentoId.substring(0, 8)}...`}
+                          </TableCell> 
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                value={alimento.quantidade}
-                                onChange={(e) =>
-                                  atualizarQuantidade(refeicao.id, alimento.alimentoId, Number(e.target.value))
-                                }
-                                className="w-16 md:w-20 text-sm"
-                              />
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {alimento.unidade}
-                              </span>
-                            </div>
+                            <Input
+                              type="number"
+                              value={alimento.quantidade}
+                              onChange={(e) =>
+                                atualizarQuantidade(refeicao.id, alimento.alimentoId, Number(e.target.value))
+                              }
+                              className="w-16 md:w-20 text-sm"
+                            />
                           </TableCell>
-                          <TableCell className="text-xs md:text-sm whitespace-nowrap">
-                            {Math.round((alimento.calorias * alimento.quantidade) / 100)} kcal
+                          <TableCell>
+                            <Select 
+                                value={alimento.unidadeMedida} 
+                                onValueChange={(v: UnidadeAlimento) => atualizarUnidade(refeicao.id, alimento.alimentoId, v)}
+                            >
+                                <SelectTrigger className="w-[100px] text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {UNIDADES_ALIMENTO.map(unidade => (
+                                        <SelectItem key={unidade} value={unidade} className="text-sm">
+                                            {unidade}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                           </TableCell>
                           <TableCell>
                             <Button
@@ -275,13 +315,21 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
                 </div>
               </div>
             )}
+            <Label className="text-xs md:text-sm">Observações da Refeição</Label>
+            <Textarea
+              placeholder="Ex: Beber 500ml de água antes desta refeição."
+              value={refeicao.observacoes}
+              onChange={(e) => atualizarRefeicao(refeicao.id, "observacoes", e.target.value)}
+              rows={2}
+              className="text-sm"
+            />
           </CardContent>
         </Card>
       ))}
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base md:text-lg">Orientações Gerais</CardTitle>
+          <CardTitle className="text-base md:text-lg">Orientações Gerais do Plano Alimentar</CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
@@ -293,6 +341,12 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
           />
         </CardContent>
       </Card>
+      
+      {/* 🚨 NOVO BOTÃO NO FINAL */}
+      <Button onClick={adicionarRefeicao} className="w-full text-sm mt-6">
+        <Plus className="mr-2 h-4 w-4" />
+        Adicionar Nova Refeição
+      </Button>
     </div>
   )
 }

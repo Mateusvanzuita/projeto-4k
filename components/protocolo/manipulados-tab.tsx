@@ -1,17 +1,20 @@
+// src/components/protocolo/manipulados-tab.tsx (FINAL: TRATAMENTO DE API ROBUSTO)
+
 "use client"
 
-import { useState, useEffect } from "react"
-import { Trash2, FlaskConical } from "lucide-react"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { Trash2, FlaskConical, Search, AlertTriangle } from "lucide-react" 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { suplementoService } from "@/services/suplemento-service"
 import type { Suplemento } from "@/types/suplemento"
 import type { ManipuladoProtocolo } from "@/types/protocolo"
 import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface ManipuladosTabProps {
   value: ManipuladoProtocolo[]
@@ -22,162 +25,226 @@ export function ManipuladosTab({ value, onChange }: ManipuladosTabProps) {
   const { toast } = useToast()
   const [manipulados, setManipulados] = useState<ManipuladoProtocolo[]>(value)
   const [manipuladosDisponiveis, setManipuladosDisponiveis] = useState<Suplemento[]>([])
+  
+  // Combobox Logic
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<Suplemento[]>([])
+  const [isComboboxOpen, setIsComboboxOpen] = useState(false)
+  const [loadingManipulados, setLoadingManipulados] = useState(true)
 
   useEffect(() => {
-    loadManipulados()
+    // 1. Carregar TODOS os suplementos
+    const fetchManipulados = async () => {
+      setLoadingManipulados(true)
+      try {
+        const result = await suplementoService.getAll({ limit: 500 }) 
+        
+        // 🚨 CORREÇÃO DE ESTRUTURA: Lida com array direto ou objeto com array dentro
+        let suplesArray: Suplemento[] = [];
+        if (Array.isArray(result)) {
+            suplesArray = result;
+        } else if (result && Array.isArray(result.data)) {
+            suplesArray = result.data;
+        } else if (result && Array.isArray(result.suplementos)) {
+            suplesArray = result.suplementos;
+        } 
+        
+        // Filtro final, garantindo lower case e null check. Agora a lista deve ser populada.
+        const manipuladoFilter = suplesArray.filter(s => 
+          s.tipo && s.tipo.toLowerCase() === 'manipulado'
+        )
+        
+        setManipuladosDisponiveis(manipuladoFilter)
+
+      } catch (error) {
+        toast({ title: "Erro", description: "Não foi possível carregar o catálogo de manipulados.", variant: "destructive" })
+      } finally {
+        setLoadingManipulados(false)
+      }
+    }
+    fetchManipulados()
   }, [])
-
+  
   useEffect(() => {
-    onChange(manipulados)
+    onChange(manipulados) // Notifica o componente pai sobre mudanças
   }, [manipulados, onChange])
-
-  const loadManipulados = async () => {
-    try {
-      const data = await suplementoService.getAll()
-      setManipuladosDisponiveis(data.filter((s) => s.tipo === "manipulado"))
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os manipulados.",
-        variant: "destructive",
-      })
+  
+  // Filtro de Busca (useMemo) - Segue o esquema dos demais: retorna os manipulados quando a busca está vazia
+  const filteredManipulados = useMemo(() => {
+    if (!searchQuery.trim()) {
+        return manipuladosDisponiveis.slice(0, 20)
     }
-  }
+    const lowerCaseQuery = searchQuery.toLowerCase()
+    
+    return manipuladosDisponiveis.filter(manipulado => {
+        const nome = manipulado.nomeManipulado || manipulado.nomeSuplemento || ''; 
+        const categoria = manipulado.categoria || '';
+        
+        return nome.toLowerCase().includes(lowerCaseQuery) ||
+               categoria.toLowerCase().includes(lowerCaseQuery)
+    }).slice(0, 20)
+  }, [searchQuery, manipuladosDisponiveis])
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query)
-    if (query.length < 2) {
-      setSearchResults([])
-      return
+
+  // --- Funções de Manipulação ---
+  
+  const handleSelectAndAddManipulado = (manipulado: Suplemento) => {
+    setSearchQuery('')
+    setIsComboboxOpen(false)
+
+    if (manipulados.some(m => m.suplementoId === manipulado.id)) {
+        toast({ title: "Atenção", description: "Este manipulado já foi adicionado.", variant: "destructive" })
+        return
     }
-    const results = manipuladosDisponiveis.filter((m) => m.nome.toLowerCase().includes(query.toLowerCase()))
-    setSearchResults(results)
-  }
 
-  const adicionarManipulado = (manipulado: Suplemento) => {
     const novoManipulado: ManipuladoProtocolo = {
-      manipuladoId: manipulado.id,
-      nome: manipulado.nome,
-      dose: manipulado.doseRecomendada,
-      horario: "",
+      suplementoId: manipulado.id,
+      suplemento: manipulado, 
+      dose: "1 cápsula",
+      horario: "Pela manhã", 
       observacoes: "",
     }
-    setManipulados([...manipulados, novoManipulado])
-    setSearchQuery("")
-    setSearchResults([])
+
+    setManipulados(prev => [...prev, novoManipulado])
   }
 
-  const removerManipulado = (manipuladoId: string) => {
-    setManipulados(manipulados.filter((m) => m.manipuladoId !== manipuladoId))
+  const removerManipulado = (id: string) => {
+    setManipulados(prev => prev.filter(m => m.suplementoId !== id))
   }
-
-  const atualizarManipulado = (manipuladoId: string, campo: keyof ManipuladoProtocolo, valor: any) => {
-    setManipulados(manipulados.map((m) => (m.manipuladoId === manipuladoId ? { ...m, [campo]: valor } : m)))
-  }
+  
+  const atualizarManipulado = useCallback((id: string, campo: keyof ManipuladoProtocolo, valor: any) => {
+    setManipulados(prev => prev.map(m => 
+      m.suplementoId === id ? { ...m, [campo]: valor } : m
+    ))
+  }, [])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Adicionar Manipulado</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Manipulados</CardTitle>
+          <CardDescription>Adicione fórmulas ou manipulados personalizados ao protocolo.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="relative">
-            <Label>Buscar Manipulado</Label>
-            <Input
-              placeholder="Digite o nome do manipulado..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-            {searchResults.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto">
-                {searchResults.map((manipulado) => (
-                  <button
-                    key={manipulado.id}
-                    className="w-full px-4 py-2 text-left hover:bg-accent flex items-center justify-between"
-                    onClick={() => adicionarManipulado(manipulado)}
-                  >
-                    <div>
-                      <div className="font-medium">{manipulado.nome}</div>
-                      <div className="text-sm text-muted-foreground">{manipulado.marca}</div>
-                    </div>
-                    <Badge variant="outline">{manipulado.doseRecomendada}</Badge>
-                  </button>
-                ))}
+        <CardContent className="space-y-4">
+          
+          {/* Combobox Customizado (Input + Lista Condicional) */}
+          <div className="space-y-2 relative">
+              <Label className="text-xs md:text-sm">Buscar Manipulado</Label>
+              <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                      placeholder={loadingManipulados ? "Carregando manipulados..." : "Digite para buscar ou clique para ver todos..."}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => setIsComboboxOpen(true)}
+                      onBlur={() => setTimeout(() => setIsComboboxOpen(false), 200)}
+                      className="pl-10 text-sm"
+                      disabled={loadingManipulados}
+                  />
               </div>
-            )}
+
+              {/* Lista de Resultados */}
+              {isComboboxOpen && (
+                  <div className="absolute z-20 w-full rounded-md border bg-popover p-1 shadow-lg max-h-60 overflow-y-auto">
+                      
+                      {loadingManipulados && (
+                          <div className="p-3 text-sm text-center text-primary">Carregando...</div>
+                      )}
+
+                      {!loadingManipulados && filteredManipulados.length > 0 && (
+                          filteredManipulados.map((manipulado) => (
+                              <button
+                                  key={manipulado.id}
+                                  className="flex items-center justify-between w-full p-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground"
+                                  onClick={() => handleSelectAndAddManipulado(manipulado)}
+                              >
+                                  {/* EXIBIÇÃO: Nome do Manipulado [Tipo/Categoria] */}
+                                  <div className="flex-1 min-w-0 pr-2">
+                                      <span className="truncate text-left font-medium text-foreground">
+                                          {manipulado.nomeManipulado || manipulado.nomeSuplemento || "[Nome Ausente]"}
+                                      </span>
+                                  </div>
+                                  
+                                  <Badge variant="secondary" className="flex-shrink-0">
+                                      {manipulado.categoria}
+                                  </Badge>
+                              </button>
+                          ))
+                      )}
+
+                      {!loadingManipulados && filteredManipulados.length === 0 && (
+                          <div className="p-3 text-center text-muted-foreground">
+                              {searchQuery.trim() ? `Nenhum manipulado encontrado para "${searchQuery}".` : "Nenhum manipulado cadastrado."}
+                          </div>
+                      )}
+                  </div>
+              )}
           </div>
+          {/* FIM Combobox Customizado */}
+
+          {manipulados.length === 0 && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                Nenhum manipulado adicionado.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {manipulados.length > 0 && (
+            <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[150px]">Manipulado</TableHead>
+                      <TableHead className="w-24">Dose</TableHead>
+                      <TableHead className="w-32">Horário/Período</TableHead>
+                      <TableHead>Observações</TableHead>
+                      <TableHead className="w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {manipulados.map((manipulado) => (
+                      <TableRow key={manipulado.suplementoId}>
+                        <TableCell className="font-medium">
+                          {manipulado.suplemento?.nomeManipulado || manipulado.suplemento?.nomeSuplemento || "Manipulado [Nome Ausente]"}
+                          <span className="text-muted-foreground text-[10px] block">{manipulado.suplemento?.categoria}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={manipulado.dose}
+                            onChange={(e) => atualizarManipulado(manipulado.suplementoId, "dose", e.target.value)}
+                            className="w-24"
+                            placeholder="1 cápsula"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={manipulado.horario}
+                            onChange={(e) => atualizarManipulado(manipulado.suplementoId, "horario", e.target.value)}
+                            className="w-32"
+                            placeholder="Pela manhã / 3x dia"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={manipulado.observacoes}
+                            onChange={(e) => atualizarManipulado(manipulado.suplementoId, "observacoes", e.target.value)}
+                            placeholder="Observações..."
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => removerManipulado(manipulado.suplementoId)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {manipulados.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FlaskConical className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
-              Nenhum manipulado adicionado ainda.
-              <br />
-              Use a busca acima para adicionar manipulados.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Manipulados do Protocolo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Manipulado</TableHead>
-                  <TableHead>Dose</TableHead>
-                  <TableHead>Horário</TableHead>
-                  <TableHead>Observações</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {manipulados.map((manipulado) => (
-                  <TableRow key={manipulado.manipuladoId}>
-                    <TableCell className="font-medium">{manipulado.nome}</TableCell>
-                    <TableCell>
-                      <Input
-                        value={manipulado.dose}
-                        onChange={(e) => atualizarManipulado(manipulado.manipuladoId, "dose", e.target.value)}
-                        className="w-24"
-                        placeholder="1 cápsula"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={manipulado.horario}
-                        onChange={(e) => atualizarManipulado(manipulado.manipuladoId, "horario", e.target.value)}
-                        className="w-32"
-                        placeholder="Pela manhã"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        value={manipulado.observacoes}
-                        onChange={(e) => atualizarManipulado(manipulado.manipuladoId, "observacoes", e.target.value)}
-                        placeholder="Observações..."
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => removerManipulado(manipulado.manipuladoId)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
