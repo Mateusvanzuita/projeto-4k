@@ -36,7 +36,7 @@ export const dashboardService = {
   getCoachDashboard: async (): Promise<DashboardData> => {
     try {
       // Usamos o tipo ApiResponse<DashboardData> que você definiu no api.ts
-      const response = await apiService.get<ApiResponse<DashboardData>>("/dashboard")
+      const response = await apiService.get<ApiResponse<DashboardData>>("/api/dashboard")
       
       // O backend retorna os dados dentro da chave 'data' da ApiResponse
       if (response.success && response.data) {
