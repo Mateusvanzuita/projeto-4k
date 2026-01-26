@@ -60,9 +60,12 @@ class AuthService {
    * Logout user
    */
   async logout(): Promise<void> {
-    // Backend doesn't have logout endpoint yet, just clear local storage
-    this.clearStorage()
-  }
+      this.clearStorage()
+      if (typeof window !== "undefined") {
+        // Redirecionamento forçado para garantir limpeza de cache/estado do React
+        window.location.href = "/auth/login"
+      }
+    }
 
   /**
    * Store authentication token

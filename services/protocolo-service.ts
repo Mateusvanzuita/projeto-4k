@@ -60,7 +60,7 @@ getAll: async (params?: { search?: string, status?: StatusProtocolo }): Promise<
     }
   },
 
-  // GET /api/protocolos/:id
+  // GET /protocolos/:id
   getById: async (id: string): Promise<Protocolo | null> => {
     try {
       const response = await apiService.get<ApiResponse<any>>(`/api/protocolos/${id}`)
@@ -71,7 +71,7 @@ getAll: async (params?: { search?: string, status?: StatusProtocolo }): Promise<
     }
   },
 
-  // POST /api/protocolos
+  // POST /protocolos
   create: async (data: ProtocoloFormData): Promise<Protocolo> => {
     try {
       const response = await apiService.post<ApiResponse<any>>(`/api/protocolos`, data)
@@ -82,7 +82,7 @@ getAll: async (params?: { search?: string, status?: StatusProtocolo }): Promise<
     }
   },
 
-  // PUT /api/protocolos/:id
+  // PUT /protocolos/:id
   update: async (id: string, data: Partial<ProtocoloFormData>): Promise<Protocolo> => {
     try {
       const response = await apiService.put<ApiResponse<any>>(`/api/protocolos/${id}`, data)
@@ -93,7 +93,7 @@ getAll: async (params?: { search?: string, status?: StatusProtocolo }): Promise<
     }
   },
 
-  // DELETE /api/protocolos/:id
+  // DELETE /protocolos/:id
   delete: async (id: string): Promise<void> => {
     try {
       await apiService.delete(`/api/protocolos/${id}`)
@@ -103,7 +103,7 @@ getAll: async (params?: { search?: string, status?: StatusProtocolo }): Promise<
     }
   },
 
-  // POST /api/protocolos/:id/clone
+  // POST /protocolos/:id/clone
   clone: async (id: string): Promise<Protocolo> => {
     try {
       const response = await apiService.post<ApiResponse<any>>(`/api/protocolos/${id}/clone`)

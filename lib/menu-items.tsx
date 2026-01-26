@@ -11,10 +11,17 @@ import {
   TrendingUp,
   Calendar,
   MessageSquare,
+  Camera,
+  LogOut,
 } from "lucide-react"
 
 // Coach menu items
 export const coachMenuItems = [
+  {
+    label: "Início",
+    icon: <Home className="h-5 w-5" />,
+    href: "/coach/dashboard",
+  },
   {
     label: "Alimentos",
     icon: <Apple className="h-5 w-5" />,
@@ -50,48 +57,51 @@ export const coachMenuItems = [
     icon: <ClipboardList className="h-5 w-5" />,
     href: "/coach/protocolos",
   },
+  // {
+  //   label: "Perfil",
+  //   icon: <UserCircle className="h-5 w-5" />,
+  //   href: "/coach/perfil",
+  // },
   {
-    label: "Perfil",
-    icon: <UserCircle className="h-5 w-5" />,
-    href: "/coach/perfil",
-  },
+  label: "Sair",
+  icon: <LogOut className="h-5 w-5" />,
+  href: "#",
+  variant: "logout" // Usaremos isso para identificar a ação especial
+},
 ]
 
 // Aluno menu items
 export const alunoMenuItems = [
-  {
+{
     label: "Início",
     icon: <Home className="h-5 w-5" />,
     href: "/aluno/dashboard",
   },
   {
-    label: "Meus Treinos",
-    icon: <Dumbbell className="h-5 w-5" />,
-    href: "/aluno/treinos",
+    label: "Meu Protocolo",
+    icon: <ClipboardList className="h-5 w-5" />,
+    href: "/aluno/protocolo",
   },
   {
-    label: "Minha Dieta",
-    icon: <Apple className="h-5 w-5" />,
-    href: "/aluno/dieta",
+    label: "Enviar Fotos",
+    icon: <Camera className="h-5 w-5" />,
+    href: "/aluno/fotos",
   },
+  // {
+  //   label: "Chat com Coach",
+  //   icon: <MessageSquare className="h-5 w-5" />,
+  //   href: "/aluno/chat",
+  // },
   {
-    label: "Evolução",
-    icon: <TrendingUp className="h-5 w-5" />,
-    href: "/aluno/evolucao",
-  },
-  {
-    label: "Agenda",
-    icon: <Calendar className="h-5 w-5" />,
-    href: "/aluno/agenda",
-  },
-  {
-    label: "Mensagens",
-    icon: <MessageSquare className="h-5 w-5" />,
-    href: "/aluno/mensagens",
-  },
-  {
-    label: "Perfil",
+    label: "Meu Perfil",
     icon: <UserCircle className="h-5 w-5" />,
     href: "/aluno/perfil",
   },
+  {
+  label: "Sair",
+  icon: <LogOut className="h-5 w-5" />,
+  href: "#",
+  variant: "logout" // Usaremos isso para identificar a ação especial
+},
 ]
+
