@@ -2,7 +2,6 @@
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 export async function registerPushNotification(alunoId?: string) {
-  // Log no console para quem tem acesso ao desktop
   console.log("🔍 [Push] Iniciando processo de registro...");
   
   // 1. Verificação de suporte básico
@@ -41,13 +40,14 @@ export async function registerPushNotification(alunoId?: string) {
       });
     }
 
-    console.log("📤 [Push] Enviando assinatura para o backend:", JSON.stringify(subscription));
-
-    // 5. Envio para o Backend (Produção ou Local)
+    // 5. Envio para o Backend com Diagnóstico Detalhado
     const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     const token = localStorage.getItem('token');
+    const fullPath = `${apiUrl}/api/students/subscribe`;
 
-    const response = await fetch(`${apiUrl}/students/subscribe`, {
+    console.log("📤 [Push] Enviando assinatura para:", fullPath);
+
+    const response = await fetch(fullPath, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -56,26 +56,36 @@ export async function registerPushNotification(alunoId?: string) {
       body: JSON.stringify({ subscription })
     });
 
+    // Se a resposta não for OK (ex: 403), capturamos os detalhes
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Erro no servidor: ${response.status}`);
+      
+      // 🚀 LOG DE DIAGNÓSTICO PARA O IPHONE
+      const errorMessage = errorData.error || errorData.message || "Erro desconhecido";
+      const tokenStatus = token ? `Presente (Início: ${token.substring(0, 8)}...)` : "AUSENTE";
+      
+      throw new Error(
+        `Status: ${response.status}\n` +
+        `Mensagem: ${errorMessage}\n` +
+        `Token: ${tokenStatus}\n` +
+        `Rota: /api/students/subscribe`
+      );
     }
 
     const resData = await response.json();
     console.log("📥 [Push] Resposta do backend:", resData);
-
-    // ✅ Alerta de sucesso para você ver no iPhone
-    // alert("🚀 Dispositivo registrado com sucesso para notificações!");
+    
+    // alert("✅ Dispositivo registrado com sucesso!");
 
   } catch (error: any) {
     console.error("❌ [Push] Erro no fluxo de registro:", error);
     
-    // 🚀 LÓGICA DE DEBUG PARA IPHONE (Visual)
-    // Se houver qualquer falha, o iPhone mostrará um alerta com o motivo real.
+    // Alerta detalhado para depuração no iPhone
     alert(
-      `❌ ERRO NO PUSH\n` +
-      `Motivo: ${error.message}\n` +
-      `URL: ${process.env.NEXT_PUBLIC_API_BASE_URL}\n` +
+      `❌ ERRO NO PUSH\n\n` +
+      `Motivo: ${error.message}\n\n` +
+      `Configuração Atual:\n` +
+      `URL BASE: ${process.env.NEXT_PUBLIC_API_BASE_URL}\n` +
       `VAPID: ${VAPID_PUBLIC_KEY ? "Carregada" : "Faltando"}`
     );
   }
