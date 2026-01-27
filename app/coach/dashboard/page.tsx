@@ -40,14 +40,16 @@ export default function CoachDashboard() {
     }
     fetchDashboard()
 
-    // 🚀 LÓGICA DE NOTIFICAÇÃO PUSH:
-    // Registra o dispositivo do Coach para receber alertas de fotos novas e logins
-    if (user) {
-      import('@/lib/push-notification').then(mod => {
-        mod.registerPushNotification(user.id);
-      }).catch(err => console.error("Falha ao carregar lib de push:", err));
-    }
-  }, [user]) 
+
+const token = localStorage.getItem('token');
+   
+if (user && token) {
+    import('@/lib/push-notification').then(mod => {
+      // Pequeno delay para garantir que o SW esteja pronto no iOS
+      setTimeout(() => mod.registerPushNotification(user.id), 1000);
+    }).catch(err => console.error("Falha ao carregar lib de push:", err));
+  }
+}, [user])
 
   if (loading) {
     return (
