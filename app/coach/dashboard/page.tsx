@@ -41,25 +41,14 @@ export default function CoachDashboard() {
     fetchDashboard()
 
 
-const token = localStorage.getItem('token');
-   
-if (user) {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        // Se o erro de antes era "AUSENTE", este alerta confirmará que o problema é o storage
-        alert("⚠️ Dashboard: Usuário logado, mas Token não encontrado no LocalStorage.");
-      }
-
+    // 🚀 LÓGICA DE NOTIFICAÇÃO PUSH:
+    // Registra o dispositivo do Coach para receber alertas de fotos novas e logins
+    if (user) {
       import('@/lib/push-notification').then(mod => {
-        console.log("🚀 Chamando registro de push...");
         mod.registerPushNotification(user.id);
-      }).catch(err => {
-        alert("❌ Falha ao carregar arquivo de push: " + err.message);
-      });
-    } else {
-      console.log("⏳ Aguardando carregamento do usuário no AuthContext...");
+      }).catch(err => console.error("Falha ao carregar lib de push:", err));
     }
-}, [user])
+  }, [user]) 
 
   if (loading) {
     return (
