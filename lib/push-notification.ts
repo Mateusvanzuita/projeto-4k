@@ -22,13 +22,12 @@ export async function registerPushNotification(alunoId?: string) {
     const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     const token = localStorage.getItem('token');
     
-    // Limpeza de URL para evitar barras duplicadas
+    // 🚀 Limpeza de URL: Garante que o caminho final seja /api/students/subscribe
     const cleanApiUrl = apiUrl?.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
     const fullPath = `${cleanApiUrl}/api/students/subscribe`;
 
-    // 🚀 VALIDAÇÃO CRÍTICA PARA iOS
     if (!token) {
-      throw new Error("AUSENTE (Usuário não logado ou storage limpo pelo iOS)");
+      throw new Error("AUSENTE: O App instalado não encontrou seu login. Por favor, faça Login dentro do aplicativo da Tela de Início.");
     }
 
     const response = await fetch(fullPath, {
@@ -48,12 +47,10 @@ export async function registerPushNotification(alunoId?: string) {
     console.log("✅ Push registrado com sucesso!");
 
   } catch (error: any) {
-    // Alerta que você recebeu no print 7.jpeg
     alert(
       `❌ ERRO NO PUSH\n\n` +
       `Motivo: ${error.message}\n` +
-      `URL BASE: ${process.env.NEXT_PUBLIC_API_BASE_URL}\n` +
-      `VAPID: ${VAPID_PUBLIC_KEY ? "Carregada" : "Faltando"}`
+      `URL BASE: ${process.env.NEXT_PUBLIC_API_BASE_URL}`
     );
   }
 }
