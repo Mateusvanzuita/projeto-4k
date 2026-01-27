@@ -43,12 +43,22 @@ export default function CoachDashboard() {
 
 const token = localStorage.getItem('token');
    
-if (user && token) {
-    import('@/lib/push-notification').then(mod => {
-      // Pequeno delay para garantir que o SW esteja pronto no iOS
-      setTimeout(() => mod.registerPushNotification(user.id), 1000);
-    }).catch(err => console.error("Falha ao carregar lib de push:", err));
-  }
+if (user) {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        // Se o erro de antes era "AUSENTE", este alerta confirmará que o problema é o storage
+        alert("⚠️ Dashboard: Usuário logado, mas Token não encontrado no LocalStorage.");
+      }
+
+      import('@/lib/push-notification').then(mod => {
+        console.log("🚀 Chamando registro de push...");
+        mod.registerPushNotification(user.id);
+      }).catch(err => {
+        alert("❌ Falha ao carregar arquivo de push: " + err.message);
+      });
+    } else {
+      console.log("⏳ Aguardando carregamento do usuário no AuthContext...");
+    }
 }, [user])
 
   if (loading) {
