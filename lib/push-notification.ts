@@ -2,6 +2,7 @@
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 export async function registerPushNotification(alunoId?: string) {
+  // Log no console para debug em desktop
   console.log("🔍 [Push] Iniciando processo de registro...");
   
   // 1. Verificação de suporte básico
@@ -43,9 +44,17 @@ export async function registerPushNotification(alunoId?: string) {
     // 5. Envio para o Backend com Diagnóstico Detalhado
     const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     const token = localStorage.getItem('token');
-    const fullPath = `${apiUrl}/api/students/subscribe`;
+    
+    // Limpa possíveis barras duplicadas na URL
+    const cleanApiUrl = apiUrl?.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+    const fullPath = `${cleanApiUrl}/api/students/subscribe`;
 
     console.log("📤 [Push] Enviando assinatura para:", fullPath);
+
+    // Validação local do token antes do fetch para evitar o 403 silencioso
+    if (!token) {
+      throw new Error("AUSENTE (Usuário não logado ou storage limpo pelo iOS)");
+    }
 
     const response = await fetch(fullPath, {
       method: 'POST',
@@ -60,9 +69,8 @@ export async function registerPushNotification(alunoId?: string) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       
-      // 🚀 LOG DE DIAGNÓSTICO PARA O IPHONE
       const errorMessage = errorData.error || errorData.message || "Erro desconhecido";
-      const tokenStatus = token ? `Presente (Início: ${token.substring(0, 8)}...)` : "AUSENTE";
+      const tokenStatus = `Presente (Início: ${token.substring(0, 8)}...)`;
       
       throw new Error(
         `Status: ${response.status}\n` +
@@ -80,11 +88,10 @@ export async function registerPushNotification(alunoId?: string) {
   } catch (error: any) {
     console.error("❌ [Push] Erro no fluxo de registro:", error);
     
-    // Alerta detalhado para depuração no iPhone
+    // Alerta detalhado para depuração no iPhone (Reflete o seu log do print 5.jpeg)
     alert(
       `❌ ERRO NO PUSH\n\n` +
-      `Motivo: ${error.message}\n\n` +
-      `Configuração Atual:\n` +
+      `Motivo: ${error.message}\n` +
       `URL BASE: ${process.env.NEXT_PUBLIC_API_BASE_URL}\n` +
       `VAPID: ${VAPID_PUBLIC_KEY ? "Carregada" : "Faltando"}`
     );
