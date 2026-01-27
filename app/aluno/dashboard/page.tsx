@@ -11,13 +11,25 @@ import {
   Target,
   ChevronRight,
   Bell,
-  Badge
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { useAuth } from "@/contexts/auth-context" 
+import { Badge } from "@/components/ui/badge"
 
 export default function AlunoDashboard() {
   const router = useRouter()
+  const { user } = useAuth() 
+
+  useEffect(() => {
+ 
+    if (user?.id) {
+      import('@/lib/push-notification').then(mod => {
+        mod.registerPushNotification(user.id);
+      }).catch(err => console.error("Erro ao carregar serviço de notificações:", err));
+    }
+  }, [user]);
 
   return (
     <AppLayout menuItems={alunoMenuItems}>

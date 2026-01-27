@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Users, ClipboardList, Loader2, UserPlus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { dashboardService, DashboardData } from "@/services/dashboard-service"
+import { useAuth } from "@/contexts/auth-context" // ✅ Importe seu contexto de autenticação
 
 const formatDate = (dateString: string | Date): string => {
   if (!dateString) return 'N/A';
@@ -20,6 +21,9 @@ export default function CoachDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // ✅ Pega os dados do usuário logado
+  const { user } = useAuth() 
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -35,7 +39,15 @@ export default function CoachDashboard() {
       }
     }
     fetchDashboard()
-  }, [])
+
+    // 🚀 LÓGICA DE NOTIFICAÇÃO PUSH:
+    // Registra o dispositivo do Coach para receber alertas de fotos novas e logins
+    if (user) {
+      import('@/lib/push-notification').then(mod => {
+        mod.registerPushNotification(user.id);
+      }).catch(err => console.error("Falha ao carregar lib de push:", err));
+    }
+  }, [user]) 
 
   if (loading) {
     return (
@@ -84,14 +96,13 @@ export default function CoachDashboard() {
           </Card>
         </div>
 
-        {/* ✅ AJUSTE: Título alterado e limite de 3 alunos aplicado */}
         <div>
           <h2 className="text-sm font-black uppercase tracking-tight mb-3 flex items-center gap-2">
             <UserPlus className="h-4 w-4 text-primary" /> Novos alunos recém cadastrados
           </h2>
           <Card className="divide-y overflow-hidden rounded-xl border-none shadow-md">
             {newRegistrations.length > 0 ? (
-              newRegistrations.slice(0, 3).map((aluno) => ( // 🚀 Limitado aos 3 mais recentes
+              newRegistrations.slice(0, 3).map((aluno) => (
                 <div key={aluno.id} className="p-4 bg-white hover:bg-slate-50 transition-colors">
                   <div className="flex justify-between items-start">
                     <div>
