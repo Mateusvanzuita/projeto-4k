@@ -36,7 +36,7 @@ export default function PerfilCoachPage() {
   useEffect(() => {
     const loadPerfil = async () => {
       try {
-        const response = await apiService.get<CoachPerfil>('/auth/profile')
+        const response = await apiService.get<CoachPerfil>('/api/auth/profile')
         setPerfil(response)
       } catch (error) {
         toast.error("Erro ao carregar perfil.")
