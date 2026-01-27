@@ -23,11 +23,13 @@ export default function CoachDashboard() {
   const [error, setError] = useState<string | null>(null)
   
   // ✅ Pega os dados do usuário logado
-  const { user } = useAuth() 
+  const { user, isLoading } = useAuth() 
 
   useEffect(() => {
+    if (isLoading || !user) return;
     const fetchDashboard = async () => {
       try {
+        
         setLoading(true)
         const dashboardData = await dashboardService.getCoachDashboard() 
         setData(dashboardData)
@@ -43,11 +45,12 @@ export default function CoachDashboard() {
 
     // 🚀 LÓGICA DE NOTIFICAÇÃO PUSH:
     // Registra o dispositivo do Coach para receber alertas de fotos novas e logins
-    if (user) {
-      import('@/lib/push-notification').then(mod => {
-        mod.registerPushNotification(user.id);
-      }).catch(err => console.error("Falha ao carregar lib de push:", err));
-    }
+    const token = localStorage.getItem('token');
+      if (token) {
+        import('@/lib/push-notification').then(mod => {
+          mod.registerPushNotification(user.id);
+        });
+      }
   }, [user]) 
 
   if (loading) {
