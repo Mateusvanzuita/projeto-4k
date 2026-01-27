@@ -1,5 +1,6 @@
 import { apiService } from "./api-service"
 import type { Aluno, AlunoFormData } from "@/types/aluno"
+import { RegistroEvolucao } from "./foto-service"
 
 interface AlunoListResponse {
   success: boolean
@@ -37,6 +38,7 @@ function transformAlunoFromBackend(backendAluno: any): Aluno {
     observacoes: backendAluno.observacoes || "",
     ativo: backendAluno.ativo !== false,
     coachId: backendAluno.coachId,
+    registrosEvolucao: backendAluno.registrosEvolucao || [],
     createdAt: backendAluno.createdAt || new Date(),
     updatedAt: backendAluno.updatedAt || new Date(),
   }
@@ -148,6 +150,17 @@ getAll: async (params?: {
     } catch (error) {
       console.error("Error deleting aluno:", error)
       throw error
+    }
+  },
+
+getEvolucaoByAlunoId: async (alunoId: string): Promise<RegistroEvolucao[]> => {
+    try {
+      // Endpoint que o Coach usa para ver as fotos de um aluno específico
+      const response = await apiService.get<{ success: boolean; data: RegistroEvolucao[] }>(`/api/evolucao/aluno/${alunoId}`)
+      return response.data || []
+    } catch (error) {
+      console.error("Erro ao buscar evolução do aluno:", error)
+      return []
     }
   },
 }
