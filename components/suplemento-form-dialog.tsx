@@ -42,7 +42,8 @@ export function SuplementoFormDialog({
       setFormData({
         nomeSuplemento: suplemento.nomeSuplemento || "",
         nomeManipulado: suplemento.nomeManipulado || "",
-        tipo: suplemento.tipo,
+        // Converta para UPPERCASE para bater com as chaves do SelectItem
+        tipo: suplemento.tipo.toUpperCase() as TipoSuplemento,
         categoria: suplemento.categoria,
         observacoes: suplemento.observacoes || "",
         contraindicacoes: suplemento.contraindicacoes || "",

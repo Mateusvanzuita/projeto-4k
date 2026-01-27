@@ -48,11 +48,9 @@ const CATEGORIA_COLORS: Record<CategoriaSuplemento, string> = {
 }
 
 export function SuplementoCard({ suplemento, onEdit, onDelete }: SuplementoCardProps) {
-  const nomeExibicao = suplemento.tipo === "SUPLEMENTO" 
-    ? suplemento.nomeSuplemento
-    : suplemento.nomeManipulado
-
-  const nomeTipo = suplemento.tipo === "SUPLEMENTO" ? "Suplemento" : "Manipulado"
+  const tipoLower = suplemento.tipo.toLowerCase();
+  const nomeExibicao = tipoLower === "suplemento" ? suplemento.nomeSuplemento : suplemento.nomeManipulado;
+  const labelTipo = tipoLower === "suplemento" ? "Suplemento" : "Manipulado";
   
   return (
     <Card className="p-4 hover:shadow-md transition-shadow">
@@ -64,13 +62,13 @@ export function SuplementoCard({ suplemento, onEdit, onDelete }: SuplementoCardP
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-lg truncate" title={nomeExibicao}>
-              {nomeExibicao || nomeTipo}
+              {nomeExibicao || ''}
             </h3>
             <div className="flex flex-wrap gap-1.5 mt-1">
               <Badge 
                 className={TIPO_COLORS[suplemento.tipo.toLowerCase()]}
               >
-                {nomeTipo}
+                {labelTipo}
               </Badge>
               {suplemento.categoria && (
                 <Badge 

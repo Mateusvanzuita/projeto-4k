@@ -43,27 +43,28 @@ function transformAlunoFromBackend(backendAluno: any): Aluno {
 }
 
 export const alunoService = {
-  getAll: async (params?: {
+getAll: async (params?: {
     page?: number
     limit?: number
     search?: string
     tipoPlano?: string
     sexo?: string
     duracaoPlano?: string
-  }): Promise<Aluno[]> => {
+  }): Promise<{ alunos: Aluno[]; pagination: AlunoListResponse['pagination'] | null }> => { // Retorno atualizado
     try {
       const queryParams = new URLSearchParams()
       if (params?.page) queryParams.append("page", params.page.toString())
       if (params?.limit) queryParams.append("limit", params.limit.toString())
       if (params?.search) queryParams.append("search", params.search)
       if (params?.tipoPlano) queryParams.append("tipoPlano", params.tipoPlano.toUpperCase())
-      if (params?.sexo) queryParams.append("sexo", params.sexo.toUpperCase())
-      if (params?.duracaoPlano) queryParams.append("duracaoPlano", params.duracaoPlano.toUpperCase())
-
+      
       const endpoint = `/api/students${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
       const response = await apiService.get<AlunoListResponse>(endpoint)
 
-      return (response.data || []).map(transformAlunoFromBackend)
+      const alunos = (response.data || []).map(transformAlunoFromBackend)
+      const pagination = response.pagination || null // Captura a paginação
+
+      return { alunos, pagination } // Retorna objeto composto
     } catch (error) {
       console.error("Error fetching alunos:", error)
       throw error

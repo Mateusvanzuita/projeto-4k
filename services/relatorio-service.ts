@@ -10,7 +10,7 @@ export const relatorioService = {
   },
 
   exportarPDF: async (filtros: RelatorioFiltros): Promise<void> => {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
       const params = new URLSearchParams();
       if (filtros.periodo) params.append("periodo", filtros.periodo);
 

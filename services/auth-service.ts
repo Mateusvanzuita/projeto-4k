@@ -56,6 +56,26 @@ class AuthService {
     }
   }
 
+async forgotPassword(email: string): Promise<{ message: string }> {
+    try {
+      const response = await fetch(`${this.apiUrl}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Erro ao processar solicitação" }));
+        throw new Error(error.message || "Não foi possível enviar o link de recuperação.");
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      throw error;
+    }
+  }
+
   /**
    * Logout user
    */

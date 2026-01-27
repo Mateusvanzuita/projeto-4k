@@ -48,13 +48,34 @@ function transformHormonioToBackend(front: HormonioFormData): any {
 
 export const hormonioService = {
   // GET: Listar todos os hormônios
-  getAll: async (): Promise<Hormonio[]> => {
+getAll: async (params?: { 
+    page?: number; 
+    limit?: number; 
+    categoria?: string; 
+    nome?: string 
+  }) => {
     try {
-      const response = await apiService.get<any>(`/api/hormonios`) 
-      return response.data.hormonios.map(transformHormonioFromBackend) 
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append("page", params.page.toString());
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
+      if (params?.categoria && params.categoria !== "todos") queryParams.append("categoria", params.categoria);
+      if (params?.nome) queryParams.append("nome", params.nome); // Backend espera 'nome'
+
+      const endpoint = `/api/hormonios${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+      
+      const response = await apiService.get<any>(endpoint);
+      
+      // O seu backend retorna os dados dentro de response.data.hormonios ou response.data.data
+      const result = response.data;
+      const hormoniosRaw = result.hormonios || result.data || [];
+      
+      return {
+        data: hormoniosRaw.map(transformHormonioFromBackend),
+        pagination: result.pagination
+      };
     } catch (error) {
-      console.error("Erro ao buscar hormônios:", error)
-      throw error
+      console.error("Erro ao buscar hormônios:", error);
+      throw error;
     }
   },
 

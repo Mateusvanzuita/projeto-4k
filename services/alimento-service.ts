@@ -28,30 +28,28 @@ function transformAlimentoFromBackend(back: any): Alimento {
 
 export const alimentoService = {
   // LISTAGEM (com paginação e filtros)
-  getAll: async (params?: { page?: number; limit?: number; tipo?: string; nome?: string }) => {
+getAll: async (params?: { page?: number; limit?: number; tipo?: string; nome?: string }) => {
     try {
       const queryParams = new URLSearchParams()
       if (params?.page) queryParams.append("page", params.page.toString())
       if (params?.limit) queryParams.append("limit", params.limit.toString())
-      if (params?.tipo) queryParams.append("tipo", params.tipo)
+      
+      // ✅ CORREÇÃO: Mudar de 'tipo' para 'categoria' para casar com o Backend
+      if (params?.tipo && params.tipo !== 'todos') {
+        queryParams.append("categoria", params.tipo.toUpperCase())
+      }
+      
+      // ✅ CORREÇÃO: Mudar de 'nome' para 'nome' (verificar se o controller usa 'nome')
       if (params?.nome) queryParams.append("nome", params.nome)
 
       const endpoint = `/api/alimentos${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-      
-      // ✅ apiService.get() já retorna o JSON direto, não precisa de .data extra
       const response = await apiService.get<AlimentoListResponse>(endpoint)
 
-      console.log('🔍 Response completa:', response) // Debug
-
-      // ✅ Acesso correto: response já é { success: true, data: {...} }
       const rawAlimentos = response.data?.alimentos || []
       const pagination = response.data?.pagination || null
 
-      console.log('🔍 Raw alimentos:', rawAlimentos) // Debug
-
+      // Mapeia os dados garantindo que o objeto Alimento tenha as propriedades corretas
       const alimentos = rawAlimentos.map(transformAlimentoFromBackend)
-
-      console.log('✅ Alimentos transformados:', alimentos) // Debug
 
       return { alimentos, pagination }
     } catch (error) {

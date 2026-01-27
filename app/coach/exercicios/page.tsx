@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Search } from "lucide-react"
+import { Plus, Search, ChevronLeft, ChevronRight, Loader2, Filter } from "lucide-react"
 import { AppLayout } from "@/components/app-layout"
 import { ExercicioCard } from "@/components/exercicio-card"
 import { ExercicioFormDialog } from "@/components/exercicio-form-dialog"
@@ -10,35 +10,39 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { coachMenuItems } from "@/lib/menu-items"
-// 💡 AGORA USAMOS O SERVICE REAL BASEADO EM API
 import { exercicioService } from "@/services/exercicio-service" 
-import type { Exercicio, ExercicioFormData, GrupoMuscular } from "@/types/exercicio"
+import type { Exercicio, ExercicioFormData } from "@/types/exercicio"
 import { toast } from "sonner"
 
-// Defina os grupos musculares que aparecerão nas abas (Tabs)
+// Grupos musculares alinhados ao seu backend
 const GRUPOS_TAB = ["todos", "peito", "costas", "ombros", "pernas", "biceps", "triceps", "abdomen"] as const
 
 export default function ExerciciosPage() {
+  const router = useRouter()
   const [exercicios, setExercicios] = useState<Exercicio[]>([])
-  // O filtro agora será feito no backend, mas o frontend pode manter um filtro local
-  // para 'searchQuery' e 'selectedGrupo' para otimizar a experiência do usuário.
-  const [filteredExercicios, setFilteredExercicios] = useState<Exercicio[]>([]) 
+  const [pagination, setPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    total: 0,
+    limit: 10
+  })
+  
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedGrupo, setSelectedGrupo] = useState<typeof GRUPOS_TAB[number]>("todos")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingExercicio, setEditingExercicio] = useState<Exercicio | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isFetching, setIsFetching] = useState(true)
 
-  // 💡 FUNÇÃO PARA CARREGAR OS DADOS DO BACKEND
-  const loadExercicios = async () => {
+  const loadExercicios = useCallback(async (page = 1) => {
     try {
-      setIsLoading(true)
+      setIsFetching(true)
       const params: any = { 
-          // Parâmetros de paginação e filtros podem ser adicionados aqui
-          // page: 1, limit: 100, // Limite para buscar todos por agora
+          page, 
+          limit: 10,
       }
       if (selectedGrupo !== "todos") {
-          params.grupoMuscular = selectedGrupo
+          params.grupoMuscular = selectedGrupo.toUpperCase()
       }
       if (searchQuery) {
           params.nomeExercicio = searchQuery
@@ -47,38 +51,26 @@ export default function ExerciciosPage() {
       const result = await exercicioService.getAll(params) 
       
       setExercicios(result.exercicios)
-      setFilteredExercicios(result.exercicios) // Filtro primário vem da API
-      
+      if (result.pagination) {
+        setPagination(result.pagination)
+      }
     } catch (error) {
       toast.error("Erro ao carregar exercícios")
     } finally {
-      setIsLoading(false)
+      setIsFetching(false)
+    }
+  }, [selectedGrupo, searchQuery])
+
+  useEffect(() => {
+    loadExercicios(1)
+  }, [selectedGrupo, searchQuery, loadExercicios])
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      loadExercicios(newPage)
+      window.scrollTo(0, 0)
     }
   }
-
-  // 💡 Lógica de filtro local (mantida para refinar resultados da API)
-  useEffect(() => {
-    let currentList = exercicios
-    
-    // Filtro por termo de busca (após a busca inicial ou filtro da API)
-    if (searchQuery) {
-        const lowerQuery = searchQuery.toLowerCase()
-        currentList = currentList.filter(ex => 
-            ex.nome.toLowerCase().includes(lowerQuery)
-        )
-    }
-    
-    // Filtro por grupo (se a API não estiver filtrando, ou se a busca por grupo for local)
-    // 💡 Para melhor performance, remova este filtro local e confie apenas no filtro da API.
-    // 💡 Se mantiver, lembre-se de que selectedGrupo já está sendo usado na loadExercicios.
-    
-    setFilteredExercicios(currentList)
-  }, [exercicios, searchQuery]) // Removi selectedGrupo daqui, ele deve acionar loadExercicios
-
-  // 💡 Carregar exercícios na montagem e quando o grupo for alterado
-  useEffect(() => {
-    loadExercicios()
-  }, [selectedGrupo, searchQuery]) // Recarrega sempre que o grupo ou busca mudar
 
   const handleAddExercicio = () => {
     setEditingExercicio(null)
@@ -90,115 +82,147 @@ export default function ExerciciosPage() {
     setIsDialogOpen(true)
   }
 
-  // 💡 Lógica de envio (CREATE/UPDATE)
   const handleSubmitForm = async (data: ExercicioFormData) => {
     setIsLoading(true)
     try {
       if (editingExercicio) {
-        // UPDATE
         await exercicioService.update(editingExercicio.id, data)
         toast.success("Exercício atualizado com sucesso.")
       } else {
-        // CREATE
         await exercicioService.create(data)
         toast.success("Exercício criado com sucesso.")
       }
-      
       setIsDialogOpen(false)
       setEditingExercicio(null)
-      await loadExercicios() // Recarregar a lista
+      loadExercicios(1)
     } catch (error) {
-      toast.error("Ocorreu um erro ao salvar o exercício.")
+      toast.error("Erro ao salvar o exercício.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  // 💡 Lógica de exclusão (DELETE)
   const handleDeleteExercicio = async (id: string) => {
-    setIsLoading(true)
     try {
       await exercicioService.delete(id)
       toast.success("Exercício excluído com sucesso.")
-      await loadExercicios() // Recarregar a lista
+      loadExercicios(pagination.page)
     } catch (error) {
-      toast.error("Ocorreu um erro ao excluir o exercício.")
-    } finally {
-      setIsLoading(false)
+      toast.error("Erro ao excluir o exercício.")
     }
   }
 
   return (
     <AppLayout menuItems={coachMenuItems}>
-      <div className="space-y-6 p-4 md:p-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Gerenciar Exercícios</h1>
-          <Button onClick={handleAddExercicio} disabled={isLoading}>
-            <Plus className="w-4 h-4 mr-2" />
-            Adicionar Exercício
+      <div className="p-4 space-y-4 pb-20">
+        {/* Header Identêntico ao de Alimentos */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Exercícios</h1>
+            <p className="text-muted-foreground mt-1 text-sm font-medium uppercase tracking-tight">
+              Gerencie seu banco de treinos
+            </p>
+          </div>
+          <Button onClick={handleAddExercicio} size="lg" className="rounded-2xl">
+            <Plus className="h-5 w-5 mr-2" />
+            Adicionar
           </Button>
         </div>
 
-        {/* Search and Filter */}
-        <div className="flex flex-col md:flex-row gap-4 items-center">
-          <div className="relative w-full md:w-1/3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        {/* Container de Filtros com a mesma estrutura de Alimentos */}
+        <div className="space-y-6 mb-12">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome do exercício..."
-              className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              disabled={isLoading}
+              className="pl-10 h-12"
             />
           </div>
 
           <Tabs 
             value={selectedGrupo} 
-            onValueChange={(value) => setSelectedGrupo(value as typeof GRUPOS_TAB[number])} 
-            className="w-full md:w-auto"
+            onValueChange={(value) => setSelectedGrupo(value as any)} 
+            className="w-full"
           >
-            <TabsList className="w-full md:w-auto overflow-x-auto justify-start">
+            <TabsList className="w-full h-auto flex flex-wrap grid grid-cols-4 lg:grid-cols-8 gap-1 bg-muted p-1">
               {GRUPOS_TAB.map(grupo => (
-                  <TabsTrigger key={grupo} value={grupo} className="capitalize">
-                      {grupo.replace("-", " ")}
-                  </TabsTrigger>
+                <TabsTrigger key={grupo} value={grupo} className="capitalize py-2">
+                  {grupo === "todos" ? "Todos" : grupo}
+                </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
         </div>
 
-        {/* Results count */}
-        <p className="text-sm text-muted-foreground">
-          {isLoading ? "Carregando..." : `${filteredExercicios.length} ${filteredExercicios.length === 1 ? "exercício" : "exercícios"} ${selectedGrupo !== "todos" ? `filtrado em ${selectedGrupo}` : ""}`}
-        </p>
+        {/* Seção de Listagem com Separação Visual */}
+        <div className="pt-8 border-t">
+          {isFetching ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm font-medium uppercase tracking-tighter">Buscando exercícios...</p>
+            </div>
+          ) : exercicios.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50/50 rounded-[40px] border-2 border-dashed border-slate-200">
+              <p className="text-muted-foreground font-medium">Nenhum exercício encontrado.</p>
+              <Button onClick={handleAddExercicio} variant="link" className="mt-2 text-primary font-bold">
+                Adicionar primeiro exercício
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {exercicios.map((exercicio) => (
+                  <ExercicioCard
+                    key={exercicio.id}
+                    exercicio={exercicio}
+                    onEdit={handleEditExercicio}
+                    onDelete={handleDeleteExercicio}
+                  />
+                ))}
+              </div>
 
-        {/* Grid */}
-        {filteredExercicios.length === 0 && !isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Nenhum exercício encontrado.</p>
-            <Button onClick={handleAddExercicio} variant="link" className="mt-2">
-              Adicionar primeiro exercício
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredExercicios.map((exercicio) => (
-              <ExercicioCard
-                key={exercicio.id}
-                exercicio={exercicio}
-                onEdit={handleEditExercicio}
-                onDelete={handleDeleteExercicio}
-              />
-            ))}
-            {isLoading && (
-              // Adiciona um placeholder de carregamento se necessário
-              <div className="col-span-full text-center py-12">Carregando mais...</div>
-            )}
-          </div>
-        )}
+              {/* Paginação Estilizada */}
+              {pagination.totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-border pt-10 mt-10">
+                  <p className="text-sm font-bold text-slate-400 uppercase tracking-tighter">
+                    Página {pagination.page} de {pagination.totalPages}
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-xl h-12 w-12 border-slate-200"
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    
+                    <div className="flex items-center gap-1.5 text-sm font-black">
+                      <span className="bg-primary/10 text-primary px-4 py-2 rounded-xl">
+                        {pagination.page}
+                      </span>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-xl h-12 w-12 border-slate-200"
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.totalPages}
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Form Dialog */}
       <ExercicioFormDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}

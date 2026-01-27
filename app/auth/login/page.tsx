@@ -1,23 +1,22 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2 } from "lucide-react"
+import { Loader2, Eye, EyeOff } from "lucide-react" // Ícones para a senha
 import Image from "next/image"
 
 export default function LoginPage() {
   const router = useRouter()
   const { login } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false) // Estado para visibilidade
   const [error, setError] = useState("")
-  const [rememberMe, setRememberMe] = useState(false)
+  
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -29,9 +28,8 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const user = await login(formData.email, formData.password, rememberMe)
+      const user = await login(formData.email, formData.password)
 
-      // Redirect based on user type
       if (user.userType === "COACH") {
         router.push("/coach/dashboard")
       } else if (user.userType === "STUDENT") {
@@ -61,22 +59,17 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Title */}
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold text-primary">Bem-vindo</h1>
             <p className="text-muted-foreground">Entre com suas credenciais</p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">E-mail ou usuário</Label>
               <Input
                 id="email"
                 type="email"
-                inputMode="email"
-                autoComplete="email"
-                autoCapitalize="none"
                 placeholder="seu@email.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -88,29 +81,30 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-                disabled={isLoading}
-                className="h-12"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="remember"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                disabled={isLoading}
-              />
-              <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
-                Lembrar-me
-              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"} // Alterna o tipo aqui
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                  disabled={isLoading}
+                  className="h-12 pr-10" // pr-10 para não sobrepor o texto ao ícone
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
+                  tabIndex={-1} // Evita que o TAB pare no ícone
+                >
+                  {showPassword ? (
+                    <Eye className="h-5 w-5" />
+                  ) : (
+                    <EyeOff className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {error && <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg">{error}</div>}
@@ -127,19 +121,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Footer */}
-          <div className="text-center text-sm text-muted-foreground">
-            <button
-              type="button"
-              className="text-primary hover:underline font-medium"
-              onClick={() => {
-                // TODO: Implement forgot password
-                alert("Funcionalidade em desenvolvimento")
-              }}
-            >
-              Esqueceu sua senha?
-            </button>
-          </div>
+          {/* 💡 "Esqueceu sua senha?" ocultado conforme solicitado */}
         </div>
       </div>
     </div>

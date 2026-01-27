@@ -57,16 +57,16 @@ export const coachMenuItems = [
     icon: <ClipboardList className="h-5 w-5" />,
     href: "/coach/protocolos",
   },
-  // {
-  //   label: "Perfil",
-  //   icon: <UserCircle className="h-5 w-5" />,
-  //   href: "/coach/perfil",
-  // },
+  {
+    label: "Perfil",
+    icon: <UserCircle className="h-5 w-5" />,
+    href: "/coach/perfil",
+  },
   {
   label: "Sair",
   icon: <LogOut className="h-5 w-5" />,
   href: "#",
-  variant: "logout" // Usaremos isso para identificar a ação especial
+  variant: "logout" 
 },
 ]
 
@@ -101,7 +101,7 @@ export const alunoMenuItems = [
   label: "Sair",
   icon: <LogOut className="h-5 w-5" />,
   href: "#",
-  variant: "logout" // Usaremos isso para identificar a ação especial
+  variant: "logout" 
 },
 ]
 

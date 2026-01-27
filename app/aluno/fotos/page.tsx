@@ -20,10 +20,8 @@ export default function EnviarFotoPage() {
   const [enviando, setEnviando] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
   
-  // 💡 URL do seu backend para carregar as fotos corretamente
-  const API_URL = "http://localhost:3000";
-
-  // Estado para o Modal de Visualização
+  const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000";
+  
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
   // Estados do Formulário

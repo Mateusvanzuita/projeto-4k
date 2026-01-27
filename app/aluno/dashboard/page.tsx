@@ -59,7 +59,7 @@ export default function AlunoDashboard() {
             <span className="text-xs font-black uppercase tracking-widest text-slate-600">Enviar Foto</span>
           </Button>
 
-          <Button 
+          {/* <Button 
             variant="outline" 
             className="h-24 rounded-3xl border-none shadow-sm bg-white hover:bg-slate-50 flex flex-col items-center justify-center gap-2 group transition-all"
             onClick={() => router.push("/aluno/chat")}
@@ -68,7 +68,7 @@ export default function AlunoDashboard() {
               <MessageSquare className="h-6 w-6" />
             </div>
             <span className="text-xs font-black uppercase tracking-widest text-slate-600">Chat Coach</span>
-          </Button>
+          </Button> */}
         </div>
 
         {/* Resumo de Progresso e Notificações */}

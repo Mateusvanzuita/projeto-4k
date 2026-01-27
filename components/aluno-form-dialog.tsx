@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -22,6 +23,7 @@ interface AlunoFormDialogProps {
 }
 
 export function AlunoFormDialog({ open, onOpenChange, onSubmit, aluno, isLoading }: AlunoFormDialogProps) {
+  const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState<AlunoFormData>({
     nomeCompleto: aluno?.nomeCompleto || "",
     dataNascimento: aluno?.dataNascimento || "",
@@ -331,22 +333,37 @@ export function AlunoFormDialog({ open, onOpenChange, onSubmit, aluno, isLoading
 
             <TabsContent value="config" className="space-y-4 mt-4">
               {!aluno && (
-                <div className="space-y-2">
-                  <Label htmlFor="senha">Senha de Primeiro Acesso *</Label>
-                  <Input
-                    id="senha"
-                    type="password"
-                    value={formData.senha}
-                    onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                    placeholder="Senha que o aluno usará no primeiro login"
-                    required={!aluno}
-                    autoComplete="new-password"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Esta senha será usada pelo aluno no primeiro acesso à plataforma
-                  </p>
-                </div>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="senha">Senha de Primeiro Acesso *</Label>
+              <div className="relative">
+                <Input
+                  id="senha"
+                  type={showPassword ? "text" : "password"} 
+                  value={formData.senha}
+                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                  placeholder="Senha do aluno"
+                  required={!aluno}
+                  autoComplete="new-password"
+                  className="pr-10" 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <Eye className="h-5 w-5" />
+                  ) : (
+                    <EyeOff className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Esta senha será usada pelo aluno no primeiro acesso à plataforma
+              </p>
+            </div>
+          )}
 
               <div className="space-y-2">
                 <Label htmlFor="frequenciaFotos">Frequência de Fotos *</Label>

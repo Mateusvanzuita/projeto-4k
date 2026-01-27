@@ -10,8 +10,8 @@ const grupoMuscularToBackend: Record<GrupoMuscular, string> = {
   "peito": "PEITO",
   "costas": "COSTAS",
   "ombros": "OMBROS",
-  "biceps": "BRACOS", // Exemplo de mapeamento
-  "triceps": "BRACOS", // Exemplo de mapeamento
+  "biceps": "BICEPS", // Exemplo de mapeamento
+  "triceps": "TRICEPS", // Exemplo de mapeamento
   "pernas": "PERNAS",
   "gluteos": "GLUTEOS",
   "abdomen": "ABDOMEN",
@@ -101,25 +101,28 @@ function transformExercicioToBackend(front: ExercicioFormData): any {
 
 export const exercicioService = {
     // LISTAGEM (com paginação e filtros)
-    getAll: async (params?: { 
+getAll: async (params?: { 
         page?: number; 
         limit?: number; 
         grupoMuscular?: string; 
         nomeExercicio?: string; 
-        orderBy?: string; 
-        order?: 'asc' | 'desc';
     }) => {
         try {
             const queryParams = new URLSearchParams()
             if (params?.page) queryParams.append("page", params.page.toString())
             if (params?.limit) queryParams.append("limit", params.limit.toString())
-            if (params?.grupoMuscular) queryParams.append("grupoMuscular", grupoMuscularToBackend[params.grupoMuscular as GrupoMuscular])
-            if (params?.nomeExercicio) queryParams.append("nomeExercicio", params.nomeExercicio)
-            if (params?.orderBy) queryParams.append("orderBy", params.orderBy)
-            if (params?.order) queryParams.append("order", params.order)
-
-            const endpoint = `/api/exercicios${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
             
+            // ✅ CORREÇÃO: Envia o grupo muscular em Uppercase se não for 'todos'
+            if (params?.grupoMuscular && params.grupoMuscular !== 'todos') {
+                queryParams.append("grupoMuscular", params.grupoMuscular.toUpperCase())
+            }
+            
+            // ✅ CORREÇÃO: Garante o nome correto do parâmetro de busca
+            if (params?.nomeExercicio) {
+                queryParams.append("nomeExercicio", params.nomeExercicio)
+            }
+
+            const endpoint = `/api/exercicios?${queryParams.toString()}`
             const response = await apiService.get<ExercicioListResponse>(endpoint)
             
             return {
