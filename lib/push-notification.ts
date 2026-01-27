@@ -47,7 +47,7 @@ export async function registerPushNotification(alunoId?: string) {
     const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     const token = localStorage.getItem('token');
 
-    const response = await fetch(`${apiUrl}/students/subscribe`, {
+    const response = await fetch(`${apiUrl}/api/students/subscribe`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
