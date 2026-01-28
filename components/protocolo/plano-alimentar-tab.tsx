@@ -38,15 +38,19 @@ export function PlanoAlimentarTab({ value, onChange }: PlanoAlimentarTabProps) {
     onChange(refeicoes)
   }, [refeicoes, onChange])
 
-  useEffect(() => {
+useEffect(() => {
     const loadAllAlimentos = async () => {
         setLoadingAlimentos(true)
         try {
-            const response = await alimentoService.getAll() 
-            const data = Array.isArray(response) ? response : response.alimentos || []
-            setAllAlimentos(data)
+            // 🚀 AJUSTE: Desestrutura apenas a lista de alimentos do retorno
+            const { alimentos } = await alimentoService.getAll() 
+            setAllAlimentos(alimentos || [])
         } catch (error) {
-            toast({ title: "Erro de Carregamento", description: "Não foi possível carregar a lista de alimentos.", variant: "destructive" })
+            toast({ 
+              title: "Erro de Carregamento", 
+              description: "Não foi possível carregar a lista de alimentos.", 
+              variant: "destructive" 
+            })
             console.error("Erro ao carregar todos os alimentos:", error)
         } finally {
             setLoadingAlimentos(false)

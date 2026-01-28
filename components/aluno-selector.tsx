@@ -27,16 +27,22 @@ export function AlunoSelector({ value, onValueChange, onNovoAluno }: AlunoSelect
     loadAlunos()
   }, [])
 
-  const loadAlunos = async () => {
-    try {
-      const data = await alunoService.getAll()
-      setAlunos(data.filter((a) => a.ativo))
-    } catch (error) {
-      console.error("Erro ao carregar alunos:", error)
-    } finally {
-      setLoading(false)
-    }
+const loadAlunos = async () => {
+  try {
+    setLoading(true);
+    // 🚀 AJUSTE: O service agora retorna um objeto { alunos, pagination }
+    const response = await alunoService.getAll(); 
+    
+    // Pegamos apenas o array de alunos do objeto retornado
+    const listaAlunos = response.alunos || [];
+    
+    setAlunos(listaAlunos.filter((a) => a.ativo));
+  } catch (error) {
+    console.error("Erro ao carregar alunos:", error);
+  } finally {
+    setLoading(false);
   }
+};
 
   const selectedAluno = alunos.find((a) => a.id === value)
 

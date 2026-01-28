@@ -196,8 +196,21 @@ export default function ProtocolosPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.push(`/coach/protocolos/${p.id}/editar`)}>Editar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => protocoloService.clone(p.id).then(loadData)}>Duplicar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/coach/protocolos/${p.id}/editar`)}>
+                            Editar
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem onClick={async () => {
+                            try {
+                              await protocoloService.clone(p.id, p.nome);
+                              toast({ title: "Clonado!", description: "Versão V2 criada como rascunho." });
+                              loadData(); // Recarrega a lista
+                            } catch (e) {
+                              toast({ title: "Erro", description: "Falha ao clonar.", variant: "destructive" });
+                            }
+                          }}>
+                            Duplicar (V2)
+                          </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600" onClick={() => protocoloService.delete(p.id).then(loadData)}>Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

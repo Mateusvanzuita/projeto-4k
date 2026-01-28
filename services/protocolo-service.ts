@@ -104,13 +104,22 @@ getAll: async (params?: { search?: string, status?: StatusProtocolo }): Promise<
   },
 
   // POST /protocolos/:id/clone
-  clone: async (id: string): Promise<Protocolo> => {
+  clone: async (id: string, currentName: string): Promise<Protocolo> => {
     try {
-      const response = await apiService.post<ApiResponse<any>>(`/api/protocolos/${id}/clone`)
-      return transformProtocoloFromBackend(response.data)
+      // Definimos o novo nome antes de enviar para o backend
+      const newName = `${currentName} V2`;
+      
+      // Enviamos para a rota de clone que você já tem no backend
+      // Nota: Se o seu backend não aceitar o 'nome' no body do clone, 
+      // você precisará ajustar o protocoloController.js para recebê-lo.
+      const response = await apiService.post<ApiResponse<any>>(`/api/protocolos/${id}/clone`, { 
+        novoNome: newName 
+      });
+      
+      return transformProtocoloFromBackend(response.data);
     } catch (error) {
-      console.error("Error cloning protocolo:", error)
-      throw error
+      console.error("Error cloning protocolo:", error);
+      throw error;
     }
   },
 

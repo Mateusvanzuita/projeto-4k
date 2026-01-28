@@ -25,13 +25,18 @@ export function StepHormonios({ data, update }: StepHormoniosProps) {
   const [hormoniosDisponiveis, sethormoniosDisponiveis] = useState<Hormonio[]>([])
 
   // Carregar hormônios da API para o Select
-  useEffect(() => {
+useEffect(() => {
     const carregarHormonios = async () => {
       try {
-        const lista = await hormonioService.getAll()
-        sethormoniosDisponiveis(lista)
+        // 🚀 AJUSTE: O serviço agora retorna um objeto { data, pagination }
+        const response = await hormonioService.getAll();
+        
+        // Pegamos apenas o array que está dentro de .data
+        const lista = response.data || [];
+        
+        sethormoniosDisponiveis(lista);
       } catch (error) {
-        console.error("Erro ao carregar hormônios:", error)
+        console.error("Erro ao carregar hormônios:", error);
       }
     }
     carregarHormonios()
