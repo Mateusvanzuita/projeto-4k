@@ -137,24 +137,23 @@ export function AlunoFormDialog({ open, onOpenChange, onSubmit, aluno, isLoading
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-  <Label htmlFor="altura">Altura (m) *</Label>
-  <Input
-    id="altura"
-    type="text" // Mudamos para text para aceitar a vírgula do teclado iOS
-    inputMode="decimal" // Força o teclado numérico com ponto/vírgula
-    value={formData.altura === 0 ? "" : formData.altura.toString().replace(".", ",")}
-    onChange={(e) => {
-      const val = e.target.value.replace(",", "."); // Converte vírgula em ponto para o JS
-      const num = Number.parseFloat(val);
-      setFormData({
-        ...formData,
-        altura: isNaN(num) ? 0 : num,
-      });
-    }}
-    placeholder="Ex: 1,77"
-    required
-  />
-</div>
+                    <Label htmlFor="altura">Altura (m) *</Label>
+                    <Select
+                      value={formData.altura.toString()}
+                      onValueChange={(value) => setFormData({ ...formData, altura: Number.parseFloat(value) })}
+                    >
+                      <SelectTrigger id="altura">
+                        <SelectValue placeholder="Selecione a altura" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 101 }, (_, i) => (1.40 + i * 0.01).toFixed(2)).map((h) => (
+                          <SelectItem key={h} value={h}>
+                            {h.replace(".", ",")} m
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="peso">Peso (kg) *</Label>
